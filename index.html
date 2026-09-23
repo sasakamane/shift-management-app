@@ -173,6 +173,10 @@ select:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59
 /* DATA TABLE */
 .data-table{width:100%;border-collapse:collapse}
 .data-table thead th{background:var(--surface-2);padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:var(--text-secondary);border-bottom:1px solid var(--border);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+/* 追加修正: 従業員一覧のソート可能な列ヘッダー */
+.data-table thead th.sortable-th{cursor:pointer;user-select:none}
+.data-table thead th.sortable-th:hover{color:var(--text-primary)}
+.data-table thead th .sort-arrow{margin-left:4px;font-size:9px;color:var(--accent)}
 .data-table tbody td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-primary)}
 .data-table tbody tr:last-child td{border-bottom:none}
 .data-table tbody tr:hover td{background:var(--surface-2)}
@@ -291,7 +295,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
         </svg>
       </div>
       <h1>シフト管理システム</h1>
-      <p>Shift Management System v7.2.0</p>
+      <p>Shift Management System v7.3.0</p>
     </div>
     <div class="form-group">
       <label>従業員番号</label>
@@ -489,7 +493,18 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
         </div>
         <div class="gantt-container">
           <table class="data-table">
-            <thead><tr><th>従業員番号</th><th>氏名</th><th>所属施設</th><th>役職</th><th>入社日</th><th>週所定日数</th><th>年休付与</th><th>年休残</th><th>最終更新日</th><th>操作</th></tr></thead>
+            <thead><tr>
+              <th class="sortable-th" onclick="setEmpSort('id')">従業員番号<span class="sort-arrow" id="emp-sort-arrow-id"></span></th>
+              <th class="sortable-th" onclick="setEmpSort('name')">氏名<span class="sort-arrow" id="emp-sort-arrow-name"></span></th>
+              <th class="sortable-th" onclick="setEmpSort('facility')">所属施設<span class="sort-arrow" id="emp-sort-arrow-facility"></span></th>
+              <th class="sortable-th" onclick="setEmpSort('role')">役職<span class="sort-arrow" id="emp-sort-arrow-role"></span></th>
+              <th class="sortable-th" onclick="setEmpSort('hireDate')">入社日<span class="sort-arrow" id="emp-sort-arrow-hireDate"></span></th>
+              <th class="sortable-th" onclick="setEmpSort('weeklyDays')">週所定日数<span class="sort-arrow" id="emp-sort-arrow-weeklyDays"></span></th>
+              <th>年休付与</th>
+              <th>年休残</th>
+              <th class="sortable-th" onclick="setEmpSort('updatedAt')">最終更新日<span class="sort-arrow" id="emp-sort-arrow-updatedAt"></span></th>
+              <th>操作</th>
+            </tr></thead>
             <tbody id="emp-tbody"></tbody>
           </table>
         </div>
@@ -1321,7 +1336,9 @@ const AppState = {
   actualDetailEmpId: null,
   actualDetailFacilityId: null, // 複数施設兼務対応: 詳細モーダルで対象にしている施設ID
   showDeletedEmployees: false, // 追加修正: 無効化（論理削除）済み従業員を一覧に表示するかどうか
-  showDeletedFacilities: false // 追加修正: 無効化（論理削除）済み施設を一覧に表示するかどうか
+  showDeletedFacilities: false, // 追加修正: 無効化（論理削除）済み施設を一覧に表示するかどうか
+  // 追加修正: 従業員一覧のソート状態（列ヘッダークリックでソート）
+  empSort: { key: null, dir: 'asc' }
 };
 
 /* ================================================================
@@ -2541,6 +2558,31 @@ function renderEmployeeTable() {
   const emps = AppState.employees
     .filter(e=>AppState.showDeletedEmployees || !e.deletedAt)
     .filter(e=>!q||e.id.toLowerCase().includes(q)||e.name.toLowerCase().includes(q));
+  // 追加修正: 列ヘッダークリックによる従業員一覧のソート
+  if (AppState.empSort.key) {
+    const { key, dir } = AppState.empSort;
+    const mul = dir === 'asc' ? 1 : -1;
+    emps.sort((a, b) => {
+      let av, bv;
+      switch (key) {
+        case 'id': av = a.id||''; bv = b.id||''; break;
+        case 'name': av = a.name||''; bv = b.name||''; break;
+        case 'facility': {
+          const fa = AppState.facilities.find(f=>f.id===a.facilityId);
+          const fb = AppState.facilities.find(f=>f.id===b.facilityId);
+          av = fa ? fa.name : ''; bv = fb ? fb.name : '';
+          break;
+        }
+        case 'role': av = a.role||''; bv = b.role||''; break;
+        case 'hireDate': av = a.hireDate||''; bv = b.hireDate||''; break;
+        case 'weeklyDays': av = a.weeklyDays||0; bv = b.weeklyDays||0; break;
+        case 'updatedAt': av = a.updatedAt||''; bv = b.updatedAt||''; break;
+        default: av = ''; bv = '';
+      }
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * mul;
+      return String(av).localeCompare(String(bv), 'ja') * mul;
+    });
+  }
   tbody.innerHTML = '';
   if(!emps.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:40px">従業員データがありません</td></tr>';return;}
   const usageMap = AppState._leaveUsageMap || {};
@@ -2584,12 +2626,31 @@ function renderEmployeeTable() {
       <td style="white-space:nowrap">${actionsCell}</td>`;
     tbody.appendChild(tr);
   });
+  updateEmpSortArrows();
 }
 
 // 追加修正: 「無効化済みも表示」トグルの状態を保持し、一覧を再描画する
 function toggleShowDeletedEmployees(el) {
   AppState.showDeletedEmployees = !!el.checked;
   renderEmployeeTable();
+}
+
+// 追加修正: 従業員一覧の列ヘッダークリックによるソート機能
+function setEmpSort(key) {
+  if (AppState.empSort.key === key) {
+    AppState.empSort.dir = AppState.empSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    AppState.empSort.key = key;
+    AppState.empSort.dir = 'asc';
+  }
+  renderEmployeeTable();
+}
+function updateEmpSortArrows() {
+  ['id','name','facility','role','hireDate','weeklyDays','updatedAt'].forEach(k=>{
+    const el = document.getElementById('emp-sort-arrow-'+k);
+    if (!el) return;
+    el.textContent = AppState.empSort.key === k ? (AppState.empSort.dir === 'asc' ? '▲' : '▼') : '';
+  });
 }
 
 async function refreshEmployeeTableWithLeave() {
