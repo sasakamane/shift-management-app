@@ -295,7 +295,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
         </svg>
       </div>
       <h1>シフト管理システム</h1>
-      <p>Shift Management System v7.5.1</p>
+      <p>Shift Management System v7.5.2</p>
     </div>
     <div class="form-group">
       <label>従業員番号</label>
@@ -1885,7 +1885,9 @@ async function initAdminApp() {
   document.getElementById('shift-month').value = ym;
   document.getElementById('shift-month').addEventListener('change', onAdminMonthChange);
   document.getElementById('agg-month').value = ym;
-  AppState.currentFacilityId = AppState.facilities[0]?.id || null;
+  // 追加修正: 無効化済み施設はタブに表示されないため、ログイン直後は
+  // タブ一番左（＝無効化されていない先頭の施設）を既定選択にする
+  AppState.currentFacilityId = AppState.facilities.find(f=>!f.deletedAt)?.id || null;
   AppState.currentDayDate = fmtDate(now);
   renderFacilityTabs();
   renderFacilityTable();
