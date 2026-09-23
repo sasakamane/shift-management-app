@@ -295,7 +295,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
         </svg>
       </div>
       <h1>シフト管理システム</h1>
-      <p>Shift Management System v7.3.0</p>
+      <p>Shift Management System v7.5.1</p>
     </div>
     <div class="form-group">
       <label>従業員番号</label>
@@ -1256,15 +1256,33 @@ const Leave = {
     return current;
   },
   // 入社日から見て、基準日asOf時点で有効な「付与サイクル」を求める
+  // クライアント確定仕様: 初回付与は個人の入社日+6ヶ月ではなく、会社共通の固定日（4/1・10/1）を基準とする。
+  //   ①4/1〜9/30入社: 入社日以後最初に到来する10/1に「勤続6ヶ月」とみなして初回付与、
+  //                    翌4/1に「勤続1年6ヶ月」とみなして2回目付与、以降は毎年4/1に1年ずつ繰り上げて付与。
+  //   ②10/1〜3/31入社: 入社日以後最初に到来する4/1に「勤続6ヶ月」とみなして初回付与、
+  //                     以降は毎年4/1に1年ずつ繰り上げて付与。
+  //   付与日数は従来通りGRANT_TABLE（法定基準の勤続区分1-7）に準拠する。
   // emp: 従業員オブジェクト（weeklyDays, annualScheduledDays, weeklyScheduledHours, leavePriorityRule,
   //      prevYearWeeklyDays/prevYearAnnualDays/prevYearWeeklyHours, prev2Year... を参照）
   // 戻り値: {grantDate, cycleStart, cycleEnd, days, nextGrantDate, category, profileSource}
   getActiveCycle(hireDateStr, emp, asOfDate=new Date()) {
     if (!hireDateStr) return null;
-    const grantDates = this.SERVICE_START_MONTHS.map((m,i)=>({date:this.addMonths(hireDateStr, m), idx:i}));
-    // 勤続区分7（6年6ヶ月）以降は、以後1年ごとに区分7の日数を継続付与
-    for (let i=1;i<=15;i++){
-      grantDates.push({date:this.addMonths(hireDateStr, 78+i*12), idx:6});
+    const hd = new Date(hireDateStr+'T00:00:00');
+    const hy = hd.getFullYear();
+    const hm = hd.getMonth(); // 0-indexed（3=4月, 8=9月, 9=10月, 2=3月）
+    let grantDates = [];
+    if (hm >= 3 && hm <= 8) {
+      // ①4/1〜9/30入社: 初回=入社年の10/1(勤続6ヶ月扱い/tier0)、以降は毎年4/1(tier1,2,3...)
+      grantDates.push({date:new Date(hy,9,1), idx:0});
+      for (let i=1;i<=40;i++){
+        grantDates.push({date:new Date(hy+i,3,1), idx:Math.min(i,6)});
+      }
+    } else {
+      // ②10/1〜3/31入社: 初回=入社日以後最初の4/1(勤続6ヶ月扱い/tier0)、以降は毎年4/1(tier1,2,3...)
+      const apr1Year = (hm >= 9) ? hy+1 : hy; // 10-12月入社→翌年4/1、1-3月入社→同年4/1
+      for (let i=0;i<=40;i++){
+        grantDates.push({date:new Date(apr1Year+i,3,1), idx:Math.min(i,6)});
+      }
     }
     grantDates.sort((a,b)=>a.date-b.date);
     let active=null, activeI=-1;
@@ -3120,9 +3138,12 @@ function getVisibleEmployeesForFacility(facilityId, ym) {
     .map(e=>({...e, isHelper:false, isConcurrent: e.facilityId!==facilityId}));
   const shifts = getShiftsFor(facilityId, ym);
   const helperIds = new Set(shifts.map(s=>s.empId).filter(id=>!registered.find(e=>e.id===id)));
+  // 追加修正: 無効化（論理削除）済みの従業員は、当月に確定シフトが残っていても
+  // シフト管理表（Gantt表示・当日勤務状況）には一時ヘルプとして表示しない。
+  // 過去実績データ自体は保持されるため、集計・Excel出力等では引き続き参照可能。
   const helpers = [...helperIds].map(id=>{
     const e=AppState.employees.find(x=>x.id===id);
-    return e ? {...e, isHelper:true, isConcurrent:false} : null;
+    return (e && !e.deletedAt) ? {...e, isHelper:true, isConcurrent:false} : null;
   }).filter(Boolean);
   return [...registered, ...helpers].sort((a,b)=>{
     if(a.isHelper!==b.isHelper) return a.isHelper?1:-1;
@@ -3571,7 +3592,47 @@ function openShiftEntryModal(empId, date) {
 
 // #15 修正: 確定後も元の希望シフトを欠員補充等の参考として表示し続ける（データはshift_requestsに保持されたまま）
 // #2 修正: 希望データを削除できるボタンを併設する（削除は論理削除＝ゴミ箱から復元可能）
-function showRequestHint(empId, date) {
+// 追加修正: 複数施設兼務対応 - 指定従業員・日付について、当施設以外ですでに確定しているシフトを取得する。
+// 管理者はEdge Function側でテーブルへのフルアクセスが許可されているため、施設をまたいだ横断参照が可能。
+async function fetchOtherFacilityConfirmedShifts(empId, date, excludeFacilityId) {
+  try {
+    const rows = await DB.get('shifts', `?emp_id=eq.${encodeURIComponent(empId)}&date=eq.${encodeURIComponent(date)}`);
+    return rows
+      .filter(r => r.facility_id && r.facility_id !== excludeFacilityId)
+      .map(r => ({
+        facilityId: r.facility_id,
+        start: r.start_time || '09:00',
+        end: r.end_time || '17:00',
+        isAnnual: !!r.is_annual,
+        isOffDuty: !!r.is_offduty
+      }))
+      .filter(s => !s.isOffDuty);
+  } catch (err) {
+    console.warn('他施設シフト確認エラー（未対応の可能性）:', err.message);
+    return [];
+  }
+}
+
+// 追加修正: 申請時間帯(reqStart～reqEnd)から、他施設ですでに確定済みの時間帯(blocks)を差し引いた
+// 「空き時間帯」の一覧を返す。確定ブロックが申請時間の途中にある場合は複数区間に分割される。
+function subtractIntervals(reqStart, reqEnd, blocks) {
+  const toMin = t => { const [h,m]=t.split(':').map(Number); return h*60+m; };
+  const toStr = m => `${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(((m%60)+60)%60).padStart(2,'0')}`;
+  let segments = [[toMin(reqStart), toMin(reqEnd)]];
+  blocks.forEach(b=>{
+    const bs = toMin(b.start), be = toMin(b.end);
+    const next = [];
+    segments.forEach(([s,e])=>{
+      if (be<=s || bs>=e) { next.push([s,e]); return; } // 重なりなし
+      if (bs>s) next.push([s,bs]);
+      if (be<e) next.push([be,e]);
+    });
+    segments = next;
+  });
+  return segments.filter(([s,e])=>e>s).map(([s,e])=>({start:toStr(s), end:toStr(e)}));
+}
+
+async function showRequestHint(empId, date) {
   const req=getRequestFor(empId, date);
   const hint=document.getElementById('shift-modal-request-hint');
   if(!req){ hint.style.display='none'; return; }
@@ -3588,6 +3649,38 @@ function showRequestHint(empId, date) {
   if(isPending && !req.isAnnual){
     document.getElementById('shift-start').value=req.start;
     document.getElementById('shift-end').value=req.end;
+  }
+  // 追加修正: 複数施設兼務対応 - 他施設ですでに確定済みのシフトを差し引いた「空き時間」を表示する
+  if (!req.isAnnual) {
+    const fid = AppState.currentFacilityId;
+    const otherShifts = await fetchOtherFacilityConfirmedShifts(empId, date, fid);
+    // 表示対象のシフト入力欄がその後切り替わっていないか確認（連打・従業員切替対策）
+    if (AppState.shiftEditTarget?.date !== date) return;
+    if (!otherShifts.length) return;
+    const otherLines = otherShifts.map(s=>{
+      const f = AppState.facilities.find(x=>x.id===s.facilityId);
+      const fname = f ? Security.escapeHtml(f.name) : '他施設';
+      return s.isAnnual ? `${fname}: 年休確定済み` : `${fname}: ${Security.escapeHtml(s.start)} ～ ${Security.escapeHtml(s.end)}（確定済み）`;
+    });
+    let extraHtml = `<div style="margin-top:6px">他施設の状況:<br>${otherLines.join('<br>')}</div>`;
+    const timeBlocks = otherShifts.filter(s=>!s.isAnnual);
+    let freeSegments = null;
+    if (timeBlocks.length) {
+      freeSegments = subtractIntervals(req.start, req.end, timeBlocks);
+      if (freeSegments.length) {
+        const freeText = freeSegments.map(s=>`${s.start}～${s.end}`).join('、');
+        extraHtml += `<div style="margin-top:6px"><strong>→ 空き時間: ${Security.escapeHtml(freeText)}</strong></div>`;
+      } else {
+        extraHtml += `<div style="margin-top:6px;color:var(--danger)"><strong>→ 申請時間内に空きがありません（他施設ですでに埋まっています）</strong></div>`;
+      }
+    }
+    hint.innerHTML += extraHtml;
+    // 空き時間帯が1区間に定まる場合のみ、シフト入力欄の初期値を自動で空き時間に合わせる（重複登録の防止）
+    if (isPending && freeSegments && freeSegments.length === 1) {
+      document.getElementById('shift-start').value = freeSegments[0].start;
+      document.getElementById('shift-end').value = freeSegments[0].end;
+      updateShiftBreakAlert();
+    }
   }
 }
 
