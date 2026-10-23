@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co;">
-<title>シフト管理システム</title>
+<title>シフト管理システム ver.8.1.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -17,6 +17,10 @@
   /* ⚠️ 聖域カラー：warning/dangerは「本当に対応が必要な状態」専用。分類（Identity）表示には使わない */
   --warning:#d97706; --warning-soft:#fef3c7;
   --danger:#dc2626; --danger-soft:#fee2e2;
+  /* ver.7.6.0 No.3: 土曜=青、日曜・祝日=赤 */
+  --sat:#1d4ed8; --sat-bg:rgba(37,99,235,.06); --hol:#dc2626; --hol-bg:rgba(239,68,68,.05);
+  /* ver.7.7.0 No.4: 定休日の網掛け */
+  --closed-hatch:repeating-linear-gradient(135deg,rgba(71,85,105,.18) 0 2px,transparent 2px 7px);
   /* Identity（分類識別）カラー：聖域を避け、隣接項目で明度のリズムをつける */
   --confirmed:#059669; --confirmed-soft:#ecfdf5;
   --changed:#4338ca; --changed-soft:#eef2ff; --changed-border:#818cf8;
@@ -141,6 +145,45 @@ select:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59
 .gantt-cell{width:16px;min-width:16px;height:44px;padding:0;cursor:pointer;transition:background .1s;position:relative}
 .gantt-cell:hover{background:var(--accent-soft)!important}
 .gantt-cell.cell-confirmed{background:rgba(16,185,129,.55)!important}
+/* ver.8.0.0 No.13/14: 仮確定（未公開）・確定解除中の表示 */
+.gantt-cell.cell-confirmed.cell-draft{background:repeating-linear-gradient(135deg,rgba(16,185,129,.55) 0 4px,rgba(16,185,129,.25) 4px 8px)!important}
+.pub-wrap{border-radius:3px}
+.pub-wrap.pub-draft{outline:1.5px dashed #64748b;outline-offset:-1px}
+.pub-wrap.pub-draft .month-cell-confirmed,.pub-wrap.pub-draft .month-cell-confirmed-changed{opacity:.75}
+.pub-wrap.pub-reopened{outline:1.5px solid #d97706;outline-offset:-1px}
+.pub-mark{display:inline-block;font-size:9px;font-weight:700;padding:0 4px;border-radius:2px;line-height:1.5;margin:1px 0 0 1px}
+.pub-mark.draft{background:#e2e8f0;color:#334155}
+.pub-mark.reopened{background:var(--warning-soft);color:#92400e}
+.pub-banner{border-radius:var(--radius);padding:8px 12px;font-size:12px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pub-banner.draft{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
+.pub-banner.published{background:var(--confirmed-soft);color:#065f46;border:1px solid #6ee7b7}
+.pub-banner.reopened{background:var(--warning-soft);color:#92400e;border:1px solid var(--warning)}
+.pub-banner button{margin-left:auto}
+#modal-shift-entry .modal-footer{flex-wrap:wrap;row-gap:8px}
+/* ver.8.1.0 No.15〜17: 申請の締め切り */
+.dl-banner{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.dl-item{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-radius:var(--radius);font-size:13px;border:1px solid}
+.dl-item.open{background:var(--accent-pale);border-color:var(--accent-soft);color:#1e3a8a}
+.dl-item.soon{background:var(--warning-soft);border-color:var(--warning);color:#92400e;font-weight:600}
+.dl-item.closed{background:var(--surface-3);border-color:var(--border);color:var(--text-secondary)}
+.dl-item .dl-tag{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:rgba(255,255,255,.7);border:1px solid currentColor;white-space:nowrap}
+.dl-item .dl-reopen{font-size:12px;color:#065f46;font-weight:600}
+.staff-cal-label.dl-closed{color:var(--text-muted);background:var(--surface-3);border:1px solid var(--border)}
+.staff-cal-label.dl-reopen{color:#065f46;background:var(--confirmed-soft);border:1px solid #6ee7b7;font-weight:700}
+.multi-date-btn.dl-locked{opacity:.35;cursor:not-allowed;text-decoration:line-through}
+.dl-chip{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--border);white-space:nowrap}
+.dl-chip.open{color:#1e40af;background:var(--accent-pale)}
+.dl-chip.soon{color:#92400e;background:var(--warning-soft);border-color:var(--warning)}
+.dl-chip.closed{color:var(--text-secondary);background:var(--surface-3)}
+#dl-tbody td{white-space:nowrap;vertical-align:middle}
+#dl-tbody td:nth-child(4){white-space:normal;min-width:120px}
+.dl-form{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-2)}
+.dl-form label{font-size:12px;color:var(--text-secondary);font-weight:500;display:block;margin-bottom:4px}
+.dl-form .full{grid-column:1/-1}
+.dl-dates{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.dl-dates span{font-size:11px;background:var(--confirmed-soft);color:#065f46;border:1px solid #6ee7b7;border-radius:999px;padding:1px 4px 1px 8px}
+.dl-dates button{border:none;background:none;cursor:pointer;color:#065f46;font-size:12px;padding:0 4px}
+.staff-cal-label.adjusting{background:var(--warning-soft);color:#92400e;border:1px solid var(--warning);font-weight:700}
 .gantt-cell.cell-request{background:rgba(124,58,237,.25)!important}
 .gantt-cell.cell-annual-confirmed{background:rgba(15,118,110,.65)!important}
 .gantt-cell.cell-annual-request{background:rgba(15,118,110,.2)!important}
@@ -157,7 +200,25 @@ select:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59
 .name-cell-inner{display:flex;align-items:center;justify-content:space-between;gap:6px}
 .pending-annual-badge{display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:600;color:#92400e;background:var(--warning-soft);border:1px solid var(--warning);border-radius:10px;padding:1px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .pending-annual-badge:hover{background:var(--warning);color:#fff}
-.weekend-col{background:rgba(239,68,68,.04)!important}
+.weekend-col{background:var(--hol-bg)!important}
+.sat-col{background:var(--sat-bg)!important}
+.gantt-table thead th.date-col.weekend-col{background:#fdecec!important;color:#4b5563}
+.gantt-table thead th.date-col.sat-col{background:#e8effd!important;color:#4b5563}
+/* ver.7.6.1: 土日・祝日の見出しは背景が淡いため、日付を濃いグレーにして読みやすくする（背景は不透明にしてスクロール時の透けも防ぐ） */
+/* ver.7.7.0 No.4: 定休日の網掛け（色付き背景の上に重ねる） */
+.gantt-table td.closed-day,.gantt-table thead th.date-col.closed-day{background-image:var(--closed-hatch)!important}
+.gantt-table thead th.date-col.closed-day:not(.weekend-col):not(.sat-col){background-color:#eceff3!important;color:#4b5563}
+.closed-mark{display:block;font-size:9px;line-height:1.2;color:#475569;font-weight:600}
+/* ver.7.7.0 No.7: 職種ごとの見出し行 */
+.job-group-row td{background:#f1f5f9!important;text-align:left!important;padding:5px 8px!important;font-size:11px;font-weight:700;color:#334155;border-top:2px solid var(--border-strong)}
+.job-group-label{position:sticky;left:8px}
+.job-group-count{font-weight:500;color:var(--text-muted);margin-left:8px}
+.job-items-box{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid var(--border);border-radius:8px}
+.job-item-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.job-item-row>span:first-child{min-width:140px;color:var(--text-secondary)}
+.closed-dow-box{display:flex;gap:6px;flex-wrap:wrap}
+.closed-dow-box label{display:flex;align-items:center;gap:4px;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;cursor:pointer}
+.hol-mark{display:block;font-size:9px;line-height:1.2;color:var(--hol);font-weight:600;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 auto}
 .chip-legend{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:12px}
 .chip-legend-item{display:flex;align-items:center;gap:4px}
 .chip-dot{width:10px;height:10px;border-radius:2px}
@@ -169,6 +230,52 @@ select:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59
 .month-cell-annual-confirmed{font-size:10px;background:var(--annual);color:#fff;border-radius:2px;padding:1px 3px;margin:1px;display:block}
 .month-cell-annual-request{font-size:10px;background:var(--annual-soft);color:var(--annual);border-radius:2px;padding:1px 3px;margin:1px;border:1px dashed var(--annual-border);display:block}
 .month-cell-offduty{font-size:10px;background:var(--offduty-soft);color:var(--offduty);border-radius:2px;padding:1px 3px;margin:1px;border:1px solid var(--offduty-border);display:block}
+/* ver.7.8.0 No.11: 空き番は「空」を○で囲んだマーク＋申請していた時間 */
+.kara-mark{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border:1px solid currentColor;border-radius:50%;font-size:8px;line-height:1;font-weight:700;margin-right:2px;vertical-align:-2px;flex-shrink:0}
+.offduty-tag{display:inline-flex;align-items:center;font-size:10px;color:var(--offduty);background:var(--offduty-soft);border:1px solid var(--offduty-border);border-radius:3px;padding:0 4px;margin-left:4px;white-space:nowrap}
+/* ver.7.8.0 No.9: 印刷・PDF出力（A3横） */
+#print-area{display:none}
+.print-opt{display:flex;flex-direction:column;gap:10px}
+.print-opt .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
+.print-opt .row>label:first-child{min-width:70px;font-size:12px;color:var(--text-secondary);font-weight:500}
+@media print{
+  @page{size:A3 landscape;margin:8mm}
+  html,body{background:#fff!important}
+  body>*:not(#print-area){display:none!important}
+  #print-area{display:block!important}
+  #print-area *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+#print-area{font-family:inherit;color:#111827}
+#print-area .p-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;border-bottom:2px solid #1a2332;padding-bottom:4px}
+#print-area .p-title{font-size:18px;font-weight:700}
+#print-area .p-sub{font-size:11px;color:#374151}
+#print-area table{width:100%;border-collapse:collapse;table-layout:fixed}
+#print-area th,#print-area td{border:1px solid #9ca3af;font-size:9pt;text-align:center;padding:2px 1px;overflow:hidden;white-space:nowrap}
+#print-area thead th{background:#e5e7eb;font-weight:600}
+#print-area thead{display:table-header-group}
+#print-area tr{page-break-inside:avoid}
+#print-area td.p-name{text-align:left;padding-left:4px;font-weight:600}
+#print-area .p-sat{color:#1d4ed8}#print-area .p-hol{color:#dc2626}
+#print-area th.p-sat-bg,#print-area td.p-sat-bg{background-color:#eef3fe}
+#print-area th.p-hol-bg,#print-area td.p-hol-bg{background-color:#fdeeee}
+#print-area .p-closed{background-image:repeating-linear-gradient(135deg,rgba(71,85,105,.22) 0 1.5px,transparent 1.5px 6px)}
+#print-area .p-holname{display:block;font-size:7pt;color:#dc2626;font-weight:600}
+#print-area .p-closedname{display:block;font-size:7pt;color:#475569;font-weight:600}
+#print-area .p-shift{display:block;background:#d1fae5;border-radius:2px;font-weight:600}
+#print-area .p-changed{display:block;background:#e0e7ff;border-radius:2px;font-weight:600}
+#print-area .p-annual{display:block;background:#ccfbf1;color:#0f766e;border-radius:2px;font-weight:700}
+#print-area .p-off{display:block;color:#4b5563;background:#f3f4f6;border-radius:2px}
+#print-area .p-req{display:block;color:#6d28d9;border:1px dashed #8b5cf6;border-radius:2px;font-style:italic}
+#print-area .p-break{display:block;font-size:7pt;color:#374151}
+#print-area tr.p-group td{background:#f1f5f9;text-align:left;font-weight:700;padding-left:6px}
+#print-area tr.p-total td{background:#f8fafc;font-weight:700}
+#print-area td.p-bar{background:#059669}
+#print-area td.p-bar-break{background:#a7f3d0}
+#print-area td.p-bar-off{background-image:repeating-linear-gradient(135deg,rgba(75,85,99,.35) 0 1.5px,transparent 1.5px 5px)}
+#print-area td.p-bar-req{background:#ede9fe}
+#print-area td.p-hr{border-left:1.5px solid #6b7280}
+#print-area .p-legend{display:flex;gap:14px;font-size:9pt;margin-top:6px;color:#374151}
+#print-area .p-foot{font-size:8pt;color:#6b7280;margin-top:4px;text-align:right}
 
 /* DATA TABLE */
 .data-table{width:100%;border-collapse:collapse}
@@ -240,6 +347,25 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
 .staff-cal-day.is-locked{cursor:default;opacity:.85}
 .staff-day-num{font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:3px}
 .staff-day-num.weekend{color:var(--danger)}
+.staff-day-num.saturday{color:var(--sat)}
+.staff-cal-day.is-closed{background-image:var(--closed-hatch)}
+.staff-closed-name{display:block;font-size:9px;color:#475569;font-weight:600;line-height:1.2}
+.multi-date-btn.is-closed{background-image:var(--closed-hatch)}
+.staff-hol-name{display:block;font-size:9px;color:var(--hol);font-weight:600;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ver.7.5.3 No.2: スマホでも曜日が分かるよう日付の横に曜日を表示 */
+.staff-day-dow{font-size:10px;font-weight:500;margin-left:2px}
+.multi-date-dow{text-align:center;font-size:10px;font-weight:600;color:var(--text-secondary);padding:2px 0}
+.multi-date-dow.weekend{color:var(--danger)}
+.multi-date-dow.saturday{color:var(--sat)}
+.multi-date-btn .md-dow{display:block;font-size:9px;line-height:1.1;opacity:.85}
+/* ver.7.5.3 No.5: 管理者シフト表の表示切替 */
+.emp-filter-count{font-size:11px;color:var(--text-muted);white-space:nowrap}
+/* ver.7.6.0 No.10: 休憩時間の自動／手動表示 */
+.break-mode{margin-top:6px;font-size:11px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;color:var(--text-secondary)}
+.break-mode .bm-tag{padding:1px 6px;border-radius:999px;font-weight:600;font-size:10px}
+.break-mode .bm-auto{background:var(--accent-pale);color:#1d4ed8;border:1px solid var(--accent-soft)}
+.break-mode .bm-manual{background:#f3f4f6;color:#374151;border:1px solid #d1d5db}
+.break-mode button{padding:1px 8px;font-size:10px}
 .staff-cal-label{font-size:10px;padding:2px 4px;border-radius:2px;display:block;margin-top:2px;line-height:1.4}
 .staff-cal-label.confirmed{background:var(--confirmed);color:#fff}
 .staff-cal-label.annual-confirmed{background:var(--annual);color:#fff}
@@ -265,6 +391,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
 .multi-date-btn:hover{border-color:var(--accent);color:var(--accent)}
 .multi-date-btn.selected{background:var(--accent);color:#fff;border-color:var(--accent)}
 .multi-date-btn.weekend{color:var(--danger)}
+.multi-date-btn.saturday{color:var(--sat)}
 .multi-date-btn.has-entry{background:var(--accent-soft);border-color:var(--accent);color:#1d4ed8}
 .multi-date-btn.disabled{opacity:.4;cursor:not-allowed}
 
@@ -295,7 +422,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
         </svg>
       </div>
       <h1>シフト管理システム</h1>
-      <p>Shift Management System v7.5.2</p>
+      <p>Shift Management System ver.8.1.0</p>
     </div>
     <div class="form-group">
       <label>従業員番号</label>
@@ -361,6 +488,30 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
             <button onclick="setShiftView('week')" id="view-btn-week">週</button>
             <button onclick="setShiftView('day')" id="view-btn-day">日</button>
           </div>
+          <!-- ver.7.6.0 No.8: 月表示の期間（1か月／前半／後半） -->
+          <div class="view-toggle" id="period-toggle" title="月表示の期間を切り替えます">
+            <button onclick="setShiftPeriod('full')" id="period-btn-full">1か月</button>
+            <button onclick="setShiftPeriod('first')" id="period-btn-first">前半</button>
+            <button onclick="setShiftPeriod('second')" id="period-btn-second">後半</button>
+          </div>
+          <span class="emp-filter-count" id="shift-period-label"></span>
+          <span id="shift-deadline-chip"></span>
+          <div class="divider-v"></div>
+          <div class="toolbar-group">
+            <label for="shift-emp-filter" style="font-size:12px;color:var(--text-secondary)">表示</label>
+            <select id="shift-emp-filter" onchange="setAdminEmpFilter(this.value)" title="表示する従業員を絞り込みます（表示中の期間が対象）">
+              <option value="all">全員</option>
+              <option value="working">勤務者のみ</option>
+              <option value="requested">申請者のみ</option>
+            </select>
+            <span class="emp-filter-count" id="shift-emp-count"></span>
+          </div>
+          <!-- ver.7.7.0 No.7: 職種（個別項目）での絞り込み・分割表示。施設に個別項目が無ければ非表示 -->
+          <div class="toolbar-group" id="shift-job-controls" style="display:none">
+            <label for="shift-job-filter" style="font-size:12px;color:var(--text-secondary)">職種</label>
+            <select id="shift-job-filter" onchange="setAdminJobFilter(this.value)"></select>
+            <label class="check-wrap" style="font-size:12px"><input type="checkbox" id="shift-job-group" checked onchange="setAdminJobGroup(this.checked)"> 職種で分ける</label>
+          </div>
           <div class="divider-v"></div>
           <div class="chip-legend">
             <span class="chip-legend-item"><span class="chip-dot" style="background:var(--confirmed)"></span>確定</span>
@@ -369,11 +520,24 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
             <span class="chip-legend-item"><span class="chip-dot" style="background:var(--annual)"></span>年休確定</span>
             <span class="chip-legend-item"><span class="chip-dot" style="background:var(--annual-soft);border:1px dashed var(--annual-border)"></span>年休希望</span>
             <span class="chip-legend-item"><span class="chip-dot" style="background:var(--offduty-soft);border:1px solid var(--offduty-border)"></span>空き番</span>
+            <span class="chip-legend-item"><span class="chip-dot" style="background:#fff;background-image:var(--closed-hatch);border:1px solid var(--border)"></span>定休日</span>
+            <span class="chip-legend-item"><span class="pub-mark draft">仮</span>仮確定（未公開）</span>
+            <span class="chip-legend-item"><span class="pub-mark reopened">解除中</span>確定解除中</span>
           </div>
           <div style="margin-left:auto" class="toolbar-group">
-            <button class="btn btn-success btn-sm" id="month-close-btn" onclick="closeMonthShiftRequests()" title="申請中のまま残っているシフト希望を一括処理し、スタッフ画面の「申請中」表示を消します">
+            <!-- ver.8.0.0 No.13: 月次確定 → 一斉確定（表示中の期間の仮確定をまとめてスタッフに公開） -->
+            <button class="btn btn-success btn-sm" id="month-close-btn" onclick="publishPeriodShifts()" title="表示中の期間の仮確定をまとめて確定し、スタッフ画面に公開します">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="20 6 9 17 4 12"/></svg>
-              <span id="month-close-btn-label">月次確定</span>
+              <span id="month-close-btn-label">一斉確定</span>
+            </button>
+            <button class="btn btn-outline btn-sm" id="publish-undo-btn" onclick="undoLastPublish()" style="display:none" title="直前の一斉確定を取り消し、仮確定・申請中の状態に戻します">一斉確定を取り消す</button>
+            <button class="btn btn-outline btn-sm" onclick="openDeadlineModal()" title="申請の締め切り日時を施設ごとに設定します">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              締め切り
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="openPrintModal()" title="シフト表をA3横で印刷・PDF保存します（半月単位／1日単位）">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              PDF出力
             </button>
             <button class="btn btn-outline btn-sm" onclick="openTrashModal()" title="削除したシフト希望を確認・復元します">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -563,6 +727,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
           </button>
         </div>
       </div>
+      <div id="staff-deadline-banner" class="dl-banner" style="display:none"></div>
       <div class="card" id="staff-leave-balance-card" style="margin-bottom:16px;display:none">
         <div class="card-body" style="padding:16px 20px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
           <div>
@@ -643,6 +808,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
       <button class="modal-close" onclick="closeModal('modal-shift-entry')">✕</button>
     </div>
     <div class="modal-body">
+      <div id="shift-publish-banner" class="pub-banner" style="display:none"></div>
       <div id="shift-modal-request-hint" style="display:none" class="request-hint-box"></div>
       <div class="form-group">
         <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">従業員</label>
@@ -651,17 +817,17 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
         <div>
           <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">開始時刻</label>
-          <select id="shift-start" style="width:100%" onchange="updateShiftBreakAlert()"></select>
+          <select id="shift-start" style="width:100%" onchange="onShiftTimeChange()"></select>
         </div>
         <div>
           <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">終了時刻</label>
-          <select id="shift-end" style="width:100%" onchange="updateShiftBreakAlert()"></select>
+          <select id="shift-end" style="width:100%" onchange="onShiftTimeChange()"></select>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;align-items:end">
         <div>
           <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">休憩時間（分）</label>
-          <input type="number" id="shift-break-minutes" min="0" max="480" step="5" style="width:100%" oninput="updateShiftBreakAlert()">
+          <input type="number" id="shift-break-minutes" min="0" max="480" step="5" style="width:100%" oninput="onShiftBreakInput()">
         </div>
         <div>
           <label class="check-wrap">
@@ -669,6 +835,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
           </label>
         </div>
       </div>
+      <div id="shift-break-mode" class="break-mode"></div>
       <div id="shift-break-alert" style="display:none;margin-top:8px;font-size:12px;padding:8px 10px;border-radius:var(--radius);background:var(--warning-soft);color:#92400e;border:1px solid var(--warning)"></div>
       <div class="form-group" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
         <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">個別項目（任意・施設内の教室等の時間を記録）</label>
@@ -678,14 +845,16 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-shift-entry')">キャンセル</button>
-      <button class="btn btn-offduty" onclick="saveOffDuty()">
+      <button class="btn btn-outline" id="shift-unpublish-btn" onclick="unpublishShift()" style="display:none" title="確定済みのシフトを修正できる状態にします">確定解除</button>
+      <button class="btn btn-offduty" id="shift-offduty-btn" onclick="saveOffDuty()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
         空き番
       </button>
-      <button class="btn btn-confirmed" id="shift-save-btn" onclick="saveShiftEntry()">
+      <button class="btn btn-outline" id="shift-save-btn" onclick="saveShiftEntry(false)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="20 6 9 17 4 12"/></svg>
-        確定
+        <span id="shift-save-btn-label">仮確定で保存</span>
       </button>
+      <button class="btn btn-confirmed" id="shift-republish-btn" onclick="saveShiftEntry(true)" style="display:none">保存して再確定</button>
     </div>
   </div>
 </div>
@@ -755,12 +924,15 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
 <!-- 施設編集 -->
 <div class="modal-overlay" id="modal-edit-facility">
   <div class="modal" style="width:400px">
-    <div class="modal-header"><h3>施設名の編集</h3><button class="modal-close" onclick="closeModal('modal-edit-facility')">✕</button></div>
+    <div class="modal-header"><h3>施設の編集</h3><button class="modal-close" onclick="closeModal('modal-edit-facility')">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="edit-facility-id">
       <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">施設名</label>
       <input type="text" id="edit-facility-name" style="width:100%" maxlength="50" oninput="sanitizeInput(this)">
       <span class="error-msg" id="edit-facility-name-error">施設名を入力してください</span>
+      <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin:14px 0 6px">定休日（曜日・複数選択可）</label>
+      <div class="closed-dow-box" id="edit-facility-closed"></div>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:6px">シフト表・スタッフのカレンダーで網掛け表示されます（表示のみ。シフト登録や給与計算には影響しません）</p>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-edit-facility')">キャンセル</button>
@@ -842,7 +1014,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">従業員番号 *</label><input type="text" id="new-emp-id" placeholder="EMP001" style="width:100%" maxlength="20" oninput="sanitizeInput(this)"></div>
         <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">氏名 *</label><input type="text" id="new-emp-name" placeholder="山田 太郎" style="width:100%" maxlength="50" oninput="sanitizeInput(this)"></div>
-        <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">所属施設（主）</label><select id="new-emp-facility" style="width:100%" onchange="renderConcurrentFacilitiesCheckboxes('new-emp-concurrent-facilities', this.value, collectConcurrentFacilities('new-emp-concurrent-facilities'))"></select></div>
+        <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">所属施設（主）</label><select id="new-emp-facility" style="width:100%" onchange="renderConcurrentFacilitiesCheckboxes('new-emp-concurrent-facilities', this.value, collectConcurrentFacilities('new-emp-concurrent-facilities'));renderJobItemSelects('new')"></select></div>
         <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">役職</label><input type="text" id="new-emp-role" placeholder="一般" style="width:100%" maxlength="30" oninput="sanitizeInput(this)"></div>
         <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">入社日</label><input type="date" id="new-emp-hiredate" style="width:100%"></div>
         <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">週所定労働日数</label><select id="new-emp-weekdays" style="width:100%"><option value="5" selected>5日（フルタイム）</option><option value="4">4日</option><option value="3">3日</option><option value="2">2日</option><option value="1">1日</option></select></div>
@@ -853,7 +1025,11 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
       <p style="font-size:11px;color:var(--text-muted);margin-top:8px">※ 年休付与日数を空欄にした場合、入社日と週所定労働日数から労働基準法の比例付与基準（週5日＝6ヶ月:10日、1年6ヶ月:11日…6年6ヶ月以降:20日／週4日以下は法定の比例日数）で自動計算されます。</p>
       <div style="margin-top:12px">
         <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">兼務施設（主所属以外にも勤務する施設があれば選択）</label>
-        <div id="new-emp-concurrent-facilities" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid var(--border);border-radius:8px;max-height:140px;overflow-y:auto"></div>
+        <div id="new-emp-concurrent-facilities" onchange="renderJobItemSelects('new')" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid var(--border);border-radius:8px;max-height:140px;overflow-y:auto"></div>
+      </div>
+      <div style="margin-top:12px">
+        <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">職種（設定マスタ「個別項目管理」の項目から選択・任意）</label>
+        <div id="new-emp-job-items" class="job-items-box"></div>
       </div>
       <span class="error-msg" id="emp-add-error" style="display:block;margin-top:8px"></span>
     </div>
@@ -872,7 +1048,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">従業員番号</label><input type="text" id="edit-emp-id" style="width:100%" disabled></div>
         <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">氏名 *</label><input type="text" id="edit-emp-name" style="width:100%" maxlength="50" oninput="sanitizeInput(this)"></div>
-        <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">所属施設（主）</label><select id="edit-emp-facility" style="width:100%" onchange="renderConcurrentFacilitiesCheckboxes('edit-emp-concurrent-facilities', this.value, collectConcurrentFacilities('edit-emp-concurrent-facilities'))"></select></div>
+        <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">所属施設（主）</label><select id="edit-emp-facility" style="width:100%" onchange="renderConcurrentFacilitiesCheckboxes('edit-emp-concurrent-facilities', this.value, collectConcurrentFacilities('edit-emp-concurrent-facilities'));renderJobItemSelects('edit')"></select></div>
         <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">役職</label><input type="text" id="edit-emp-role" style="width:100%" maxlength="30" oninput="sanitizeInput(this)"></div>
         <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">入社日</label><input type="date" id="edit-emp-hiredate" style="width:100%"></div>
         <div><label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">週所定労働日数</label><select id="edit-emp-weekdays" style="width:100%"><option value="5">5日（フルタイム）</option><option value="4">4日</option><option value="3">3日</option><option value="2">2日</option><option value="1">1日</option></select></div>
@@ -883,7 +1059,11 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
       <p style="font-size:11px;color:var(--text-muted);margin-top:8px">※ 年休付与日数を空欄にした場合、入社日と週所定労働日数から労働基準法の比例付与基準で自動計算されます。</p>
       <div style="margin-top:12px">
         <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">兼務施設（主所属以外にも勤務する施設があれば選択）</label>
-        <div id="edit-emp-concurrent-facilities" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid var(--border);border-radius:8px;max-height:140px;overflow-y:auto"></div>
+        <div id="edit-emp-concurrent-facilities" onchange="renderJobItemSelects('edit')" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid var(--border);border-radius:8px;max-height:140px;overflow-y:auto"></div>
+      </div>
+      <div style="margin-top:12px">
+        <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">職種（設定マスタ「個別項目管理」の項目から選択・任意）</label>
+        <div id="edit-emp-job-items" class="job-items-box"></div>
       </div>
       <span class="error-msg" id="emp-edit-error" style="display:block;margin-top:8px"></span>
     </div>
@@ -986,7 +1166,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
           <span style="font-size:12px;font-weight:600;color:var(--text-secondary)">列マッピング設定</span>
           <button class="btn btn-outline btn-sm" onclick="addImportField()">＋項目追加</button>
         </div>
-        <p style="font-size:11px;color:var(--text-muted);margin:-4px 0 8px">対応フィールド名：従業員番号／氏名／所属施設／役職／入社日／週所定労働日数／年休付与日数（入社日は「2026/4/1」のような日付、またはExcelの日付型で入力してください。所属施設は「設定マスタ」に登録済みの施設名と完全一致する必要があります）</p>
+        <p style="font-size:11px;color:var(--text-muted);margin:-4px 0 8px">対応フィールド名：従業員番号／氏名／所属施設／役職／入社日／週所定労働日数／年休付与日数／職種（職種は所属施設の「個別項目管理」に登録済みの項目名と完全一致させてください。入社日は「2026/4/1」のような日付、またはExcelの日付型で入力してください。所属施設は「設定マスタ」に登録済みの施設名と完全一致する必要があります）</p>
         <div id="import-fields">
           <div class="import-field-row"><span style="font-size:12px;color:var(--text-secondary);width:70px;flex-shrink:0">フィールド名</span><input type="text" value="従業員番号" oninput="sanitizeInput(this)"><span style="font-size:12px;color:var(--text-secondary)">列番号</span><input type="number" value="1" min="1" max="100" style="width:60px"></div>
           <div class="import-field-row"><span style="font-size:12px;color:var(--text-secondary);width:70px;flex-shrink:0">フィールド名</span><input type="text" value="氏名" oninput="sanitizeInput(this)"><span style="font-size:12px;color:var(--text-secondary)">列番号</span><input type="number" value="2" min="1" max="100" style="width:60px"></div>
@@ -1040,6 +1220,72 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
 </div>
 
 <!-- 通知 -->
+<!-- ver.8.1.0 No.15〜17: 申請の締め切り設定 -->
+<div class="modal-overlay" id="modal-deadlines">
+  <div class="modal" style="width:720px;max-width:96vw">
+    <div class="modal-header"><h3 id="dl-modal-title">申請の締め切り設定</h3><button class="modal-close" onclick="closeModal('modal-deadlines')">✕</button></div>
+    <div class="modal-body">
+      <div class="dl-form">
+        <input type="hidden" id="dl-edit-id">
+        <div><label for="dl-ym">対象月</label><input type="month" id="dl-ym" style="width:100%" onchange="onDeadlineTargetChange()"></div>
+        <div><label for="dl-period">区分</label>
+          <select id="dl-period" style="width:100%" onchange="onDeadlineTargetChange()">
+            <option value="first">前半（1〜15日）</option><option value="second">後半（16日〜月末）</option><option value="full">1か月</option>
+          </select></div>
+        <div><label for="dl-label">呼称（自動入力・修正できます）</label><input type="text" id="dl-label" maxlength="40" style="width:100%" oninput="sanitizeInput(this);AppState.dlLabelTouched=this.value.trim()!==''"></div>
+        <div><label for="dl-at">締め切り日時</label><input type="datetime-local" id="dl-at" style="width:100%"></div>
+        <div class="full" id="dl-reopen-wrap" style="display:none">
+          <label>追加募集の日（締め切り後もこの日だけ受け付けます）</label>
+          <div style="display:flex;gap:8px;align-items:center"><input type="date" id="dl-reopen-date"><button type="button" class="btn btn-outline btn-sm" onclick="addDeadlineReopenDate()">日を追加</button></div>
+          <div class="dl-dates" id="dl-reopen-list"></div>
+        </div>
+        <div class="full" style="display:flex;gap:8px;justify-content:flex-end">
+          <span class="error-msg" id="dl-error" style="margin-right:auto"></span>
+          <button type="button" class="btn btn-outline btn-sm" id="dl-cancel-edit" style="display:none" onclick="resetDeadlineForm()">編集をやめる</button>
+          <button type="button" class="btn btn-primary btn-sm" id="dl-save-btn" onclick="saveDeadline()">締め切りを追加</button>
+        </div>
+      </div>
+      <div class="gantt-container" style="margin-top:14px">
+        <table class="data-table"><thead><tr><th>呼称</th><th>対象</th><th>締め切り</th><th>状態</th><th>操作</th></tr></thead><tbody id="dl-tbody"></tbody></table>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:8px">締め切りを過ぎると、スタッフはその期間の日付に申請・変更ができなくなります（サーバー側でも判定）。不足日の追加募集は、締め切りの「編集」から日付を追加してください。</p>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-deadlines')">閉じる</button></div>
+  </div>
+</div>
+
+<!-- ver.7.8.0 No.9: 印刷・PDF出力 -->
+<div class="modal-overlay" id="modal-print">
+  <div class="modal" style="width:460px">
+    <div class="modal-header"><h3>シフト表の印刷・PDF出力（A3横）</h3><button class="modal-close" onclick="closeModal('modal-print')">✕</button></div>
+    <div class="modal-body print-opt">
+      <div class="row"><label>出力単位</label>
+        <label class="check-wrap"><input type="radio" name="print-unit" value="half" checked onchange="syncPrintModal()"> 半月</label>
+        <label class="check-wrap"><input type="radio" name="print-unit" value="day" onchange="syncPrintModal()"> 1日</label>
+      </div>
+      <div class="row" id="print-half-row"><label>期間</label>
+        <select id="print-half"><option value="first">前半（1〜15日）</option><option value="second">後半（16日〜月末）</option></select>
+      </div>
+      <div class="row" id="print-day-row" style="display:none"><label>日付</label><input type="date" id="print-date"></div>
+      <!-- ver.7.8.1: 掲示用（確定シフトのみ）を追加 -->
+      <div class="row"><label>印刷内容</label>
+        <label class="check-wrap"><input type="radio" name="print-mode" value="admin" checked onchange="syncPrintModal()"> 管理用</label>
+        <label class="check-wrap"><input type="radio" name="print-mode" value="post" onchange="syncPrintModal()"> 確定シフトのみ（掲示用）</label>
+      </div>
+      <p id="print-mode-note" style="font-size:11px;color:var(--text-muted);margin:-4px 0 0 80px"></p>
+      <div class="row" id="print-req-row"><label>オプション</label>
+        <label class="check-wrap"><input type="checkbox" id="print-include-req"> 未確定の希望も印刷する</label>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin:0">対象はシフト表で選択中の施設・年月です。「表示」「職種」の絞り込みも反映されます。<br>印刷画面で送信先を「PDFに保存」にするとPDFファイルになります。用紙はA3・横向きを選んでください。</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-print')">キャンセル</button>
+      <button class="btn btn-primary" onclick="printShiftSheet()">印刷・PDF保存</button>
+    </div>
+  </div>
+</div>
+<div id="print-area" aria-hidden="true"></div>
+
 <div class="notif" id="notif">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>
   <span id="notif-text">保存しました</span>
@@ -1052,6 +1298,8 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
    ★★★ SUPABASE設定 ★★★
    以下の2行を自分のプロジェクトの値に書き換えてください
 ================================================================ */
+// アプリのバージョン（大規模改修: x.0.0 / 中規模: 0.x.0 / 小規模: 0.0.x）
+const APP_VERSION = '8.1.0';
 const SUPABASE_URL = 'https://iehxxwhzzwlhqwxqgdph.supabase.co';           // 例: https://xxxxxxxxxx.supabase.co
 const SUPABASE_KEY = 'sb_publishable_frYDQgYp34Gqw90YoleZzg_DeaoWOEb';       // 例: sb_publishable_xxxxxxxxxxxx
 // 追加修正: RLS有効化に伴い、テーブルへは直接アクセスせず、必ずEdge Function（プロキシ）を経由する。
@@ -1077,7 +1325,7 @@ const DB = {
       const status = result.status || res.status;
       const msg = result.msg!=null ? result.msg : (text || '不明なエラー');
       const e = new Error(`DB Error [${status}]: ${msg}`);
-      if (status===401 && /セッションが無効/.test(String(msg))) e.sessionExpired = true;
+      if (status===401 && /セッションが無効/.test(String(msg))) { e.sessionExpired = true; SessionStore.clear(); }
       throw e;
     }
     return result.data;
@@ -1356,7 +1604,65 @@ const AppState = {
   showDeletedEmployees: false, // 追加修正: 無効化（論理削除）済み従業員を一覧に表示するかどうか
   showDeletedFacilities: false, // 追加修正: 無効化（論理削除）済み施設を一覧に表示するかどうか
   // 追加修正: 従業員一覧のソート状態（列ヘッダークリックでソート）
-  empSort: { key: null, dir: 'asc' }
+  empSort: { key: null, dir: 'asc' },
+  shiftPeriod: 'full', // ver.7.6.0 No.8: 月表示の期間（full=1か月 / first=1〜15日 / second=16日〜月末）
+  shiftBreakManual: false, // ver.7.6.0 No.10: シフト入力モーダルで休憩時間を手動設定中か
+  adminJobFilter: 'all', // ver.7.7.0 No.7: 職種の絞り込み（all / none=未設定 / 個別項目ID）
+  adminJobGroup: true,    // ver.7.7.0 No.7: 職種ごとに見出しで分けるか
+  adminEmpFilter: 'all' // ver.7.5.3 No.5: シフト管理表の表示切替（all=全員 / working=勤務者のみ / requested=申請者のみ）
+};
+
+/* ================================================================
+   ver.7.5.3 No.1: ログイン状態の保持（画面更新でログアウトしない）
+   - 保存先は sessionStorage（タブを閉じると消える。他タブ・他端末とは共有しない）
+   - 保存するのはサーバー発行のセッショントークンと表示用の最小限のユーザー情報のみ
+     （パスワードは保存しない）
+   - 有効期限はログインから8時間（延長しない）。サーバー側でトークンが無効になっていれば
+     復元時のデータ読み込みで失敗し、ログイン画面に戻す
+================================================================ */
+const SessionStore = {
+  KEY: 'shiftapp.session.v1',
+  TTL_MS: 8*60*60*1000,
+  _store() { try { return window.sessionStorage; } catch(_) { return null; } },
+  _sanitizeUser(u) {
+    if (!u || typeof u!=='object') return null;
+    const id = Security.sanitizeStr(String(u.id||''), 32);
+    const role = u.role==='admin' ? 'admin' : 'staff';
+    if (!id) return null;
+    const out = { id, role, name: Security.sanitizeStr(String(u.name||''), 64) };
+    if (u.facilityId!=null) out.facilityId = Security.sanitizeStr(String(u.facilityId), 64);
+    return out;
+  },
+  save() {
+    const st = this._store();
+    if (!st || !AppState.sessionToken || !AppState.currentUser) return;
+    const user = this._sanitizeUser(AppState.currentUser);
+    if (!user) return;
+    try { st.setItem(this.KEY, JSON.stringify({ token: AppState.sessionToken, user, exp: Date.now()+this.TTL_MS, tab: null })); } catch(_) {}
+  },
+  load() {
+    const st = this._store();
+    if (!st) return null;
+    let data = null;
+    try { data = JSON.parse(st.getItem(this.KEY) || 'null'); } catch(_) { data = null; }
+    if (!data || typeof data.token!=='string' || !data.token || data.token.length>4096
+        || typeof data.exp!=='number' || data.exp<=Date.now()) { this.clear(); return null; }
+    const user = this._sanitizeUser(data.user);
+    if (!user) { this.clear(); return null; }
+    const tab = (typeof data.tab==='string' && /^[a-z-]{1,40}$/.test(data.tab)) ? data.tab : null;
+    return { token: data.token, user, tab };
+  },
+  saveTab(name) {
+    const st = this._store();
+    if (!st || !AppState.sessionToken) return;
+    try {
+      const data = JSON.parse(st.getItem(this.KEY) || 'null');
+      if (!data) return;
+      data.tab = String(name||'');
+      st.setItem(this.KEY, JSON.stringify(data));
+    } catch(_) {}
+  },
+  clear() { const st = this._store(); try { st && st.removeItem(this.KEY); } catch(_) {} }
 };
 
 /* ================================================================
@@ -1375,6 +1681,8 @@ async function loadAllData() {
     ]);
     AppState.facilities = facilities.map(f => ({
       id: f.id, name: f.name, createdAt: f.created_at?.slice(0,10)||'',
+      closedWeekdays: parseClosedWeekdays(f.closed_weekdays), // ver.7.7.0 No.4: 定休曜日（列が無い環境では空配列）
+      requestDeadlines: parseRequestDeadlines(f.request_deadlines), // ver.8.1.0 No.15: 申請の締め切り（列が無い環境では空配列）
       // 追加修正: 論理削除フラグ。DBにdeleted_at列が無い環境でも undefined のまま安全に動作する（全員「有効」扱い）
       deletedAt: f.deleted_at||null
     }));
@@ -1382,6 +1690,7 @@ async function loadAllData() {
       id: e.id, name: e.name, facilityId: e.facility_id, role: e.role||'', pwHash: e.pw_hash||'',
       hireDate: e.hire_date||null, leaveOverrideDays: (e.leave_override_days!=null?e.leave_override_days:null),
       weeklyDays: e.weekly_work_days||5, updatedAt: e.updated_at||null,
+      jobItems: parseJobItems(e.job_items), // ver.7.7.0 No.7: 施設ごとの職種 {facilityId: 個別項目ID}
       // 追加修正: 論理削除フラグ。DBにdeleted_at列が無い環境でも undefined のまま安全に動作する（全員「有効」扱い）
       deletedAt: e.deleted_at||null,
       // #7 修正: 年休付与ロジックの実績ベース判定に使う項目（DB未追加でもundefinedのまま安全に動作＝法定の週日数基準にフォールバックする）
@@ -1459,6 +1768,44 @@ function renderConcurrentFacilitiesCheckboxes(containerId, primaryFacilityId, se
   if (!opts.length) { el.innerHTML = '<span style="color:var(--text-muted);font-size:12px">他に選択できる施設がありません</span>'; return; }
   el.innerHTML = opts.map(f=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap;cursor:pointer"><input type="checkbox" value="${Security.escapeHtml(f.id)}" ${sel.has(f.id)?'checked':''}> ${Security.escapeHtml(f.name)}</label>`).join('');
 }
+// ver.7.7.0 No.7: 従業員モーダルの職種欄（主所属＋兼務施設ごとに、その施設の個別項目から選ぶ）
+function renderJobItemSelects(prefix, initial) {
+  const box=document.getElementById(prefix+'-emp-job-items');
+  if(!box) return;
+  const current = initial || collectJobItems(prefix);
+  const primary = document.getElementById(prefix+'-emp-facility')?.value || '';
+  const fids = [primary, ...collectConcurrentFacilities(prefix+'-emp-concurrent-facilities')].filter((v,i,a)=>v && a.indexOf(v)===i);
+  if(!fids.length){ box.innerHTML='<span style="font-size:12px;color:var(--text-muted)">所属施設を選択してください</span>'; return; }
+  box.innerHTML = fids.map(fid=>{
+    const f=AppState.facilities.find(x=>x.id===fid);
+    const acts=getFacilityJobItems(fid);
+    const opts='<option value="">未設定</option>'+acts.map(a=>`<option value="${Security.escapeHtml(a.id)}"${current[fid]===a.id?' selected':''}>${Security.escapeHtml(a.name)}</option>`).join('');
+    return `<div class="job-item-row"><span>${Security.escapeHtml(f?.name||fid)}${fid===primary?'（主）':''}</span>`
+      + `<select data-fid="${Security.escapeHtml(fid)}"${acts.length?'':' disabled'}>${opts}</select>`
+      + (acts.length?'':'<span style="font-size:11px;color:var(--text-muted)">この施設は個別項目が未登録です</span>') + `</div>`;
+  }).join('');
+}
+function collectJobItems(prefix) {
+  const out={};
+  document.querySelectorAll(`#${prefix}-emp-job-items select[data-fid]`).forEach(sel=>{
+    const fid=sel.dataset.fid, v=sel.value;
+    if(fid && v && AppState.facilityActivities.some(a=>a.id===v && a.facilityId===fid && !a.deleted)) out[fid]=v;
+  });
+  return out;
+}
+// job_items 列が未追加の環境でも従業員の保存を止めないよう、列エラーのときは列を外して再送する
+async function sendEmployeeWithJobItems(send, payload) {
+  try { await send(payload); return true; }
+  catch(err) {
+    if(!('job_items' in payload) || !/job_items/i.test(err.message||'')) throw err;
+    Security.log('JOB_ITEMS_COLUMN_MISSING', err.message, 'WARN');
+    const p2={...payload}; delete p2.job_items;
+    await send(p2);
+    return false;
+  }
+}
+const JOB_ITEMS_COLUMN_MSG = '職種を保存する列がDBに未追加です。Supabaseでemployeesテーブルにjob_itemsを追加してください（その他の項目は保存しました）';
+
 function collectConcurrentFacilities(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return [];
@@ -1475,10 +1822,20 @@ async function loadShiftsForMonth(facilityId, ym) {
       isAnnual: r.is_annual||false, isOffDuty: r.is_offduty||false, confirmed: true,
       breakMinutes: r.break_minutes!=null ? r.break_minutes : null, // #14 修正: 休憩時間（分）
       breakStart: r.break_start||null, breakEnd: r.break_end||null, // 仕様変更: コマ単位で割り当てた休憩の時間帯
+      breakManual: r.break_manual===true ? true : (r.break_manual===false ? false : null), // ver.7.6.0 No.10: 休憩を手動設定したか（null=旧データ）
       // 追加修正: 勤務実績（シフトの予定時刻に対する実際の勤務時刻・確定状態）
       actualStart: r.actual_start||null, actualEnd: r.actual_end||null,
-      actualConfirmed: r.actual_confirmed||false, actualConfirmedAt: r.actual_confirmed_at||null
+      actualConfirmed: r.actual_confirmed||false, actualConfirmedAt: r.actual_confirmed_at||null,
+      // ver.8.0.0 No.13/14: 公開状態（draft=仮確定・published=確定・reopened=確定解除中）。列が無い／旧データは確定扱い
+      publishStatus: normalizePublishStatus(r.publish_status),
+      publishedAt: r.published_at||null,
+      publishedSnapshot: parsePublishSnapshot(r.published_snapshot),
+      republishedAt: r.republished_at||null
     }));
+    // ver.8.0.0: スタッフには公開済みの内容だけを渡す（仮確定は見せない／確定解除中は元の確定内容を「調整中」で見せる）
+    if(AppState.currentUser?.role!=='admin'){
+      AppState.shifts[facilityId][ym] = AppState.shifts[facilityId][ym].map(staffViewOfShift).filter(Boolean);
+    }
   } catch(err) {
     console.error('シフト読み込みエラー:', err);
   }
@@ -1518,7 +1875,8 @@ async function loadRequestsForMonth(ym) {
         id: r.id, empId: r.emp_id, facilityId: r.facility_id,
         date: r.date, ym: r.ym, start: r.start_time||'09:00', end: r.end_time||'17:00',
         isAnnual: r.is_annual||false, status: r.status||'pending',
-        autoClosedAt: r.auto_closed_at||null // #6 修正: 月次確定で自動処理されたかどうかのフラグ
+        autoClosedAt: r.auto_closed_at||null, // #6 修正: 月次確定で自動処理されたかどうかのフラグ
+        submittedAt: r.submitted_at||null // ver.8.1.0: 申請日時
       });
     });
   } catch(err) {
@@ -1650,6 +2008,168 @@ function getDow(d){ return ['日','月','火','水','木','金','土'][d.getDay(
 function isWe(d){ return d.getDay()===0||d.getDay()===6; }
 
 /* ================================================================
+   ver.7.6.0 No.3: 日本の祝日（「国民の祝日に関する法律」に基づきアプリ内で計算）
+   - 外部サービスやDBに依存しないため、通信障害でも表示が崩れない
+   - 春分・秋分の日は天文計算の近似式（1980〜2099年で有効）
+   - 振替休日（祝日が日曜→次の平日）、国民の休日（祝日に挟まれた平日）に対応
+   - 法改正や特例の祝日（即位の礼など）が新設された場合は、この関数の更新が必要
+================================================================ */
+const JpHoliday = {
+  _cache: {},
+  _key(y,m,d){ return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; },
+  _nthMonday(y,m,n){ const first=new Date(y,m-1,1).getDay(); return 1+((8-first)%7)+(n-1)*7; },
+  forYear(y) {
+    if(this._cache[y]) return this._cache[y];
+    const H = new Map();
+    const add=(m,d,name)=>H.set(this._key(y,m,d),name);
+    add(1,1,'元日');
+    add(1,this._nthMonday(y,1,2),'成人の日');
+    add(2,11,'建国記念の日');
+    if(y>=2020) add(2,23,'天皇誕生日');
+    if(y>=1980 && y<=2099){
+      const base=y-1980, leap=Math.floor(base/4);
+      add(3,Math.floor(20.8431+0.242194*base-leap),'春分の日');
+      add(9,Math.floor(23.2488+0.242194*base-leap),'秋分の日');
+    }
+    add(4,29,'昭和の日');
+    add(5,3,'憲法記念日'); add(5,4,'みどりの日'); add(5,5,'こどもの日');
+    if(y===2020){ add(7,23,'海の日'); add(7,24,'スポーツの日'); add(8,10,'山の日'); }
+    else if(y===2021){ add(7,22,'海の日'); add(7,23,'スポーツの日'); add(8,8,'山の日'); }
+    else {
+      add(7,this._nthMonday(y,7,3),'海の日');
+      if(y>=2016) add(8,11,'山の日');
+      add(10,this._nthMonday(y,10,2), y>=2020?'スポーツの日':'体育の日');
+    }
+    add(9,this._nthMonday(y,9,3),'敬老の日');
+    add(11,3,'文化の日');
+    add(11,23,'勤労感謝の日');
+    // 国民の休日: 前日と翌日が祝日の平日
+    const base=new Map(H);
+    for(let t=new Date(y,0,2); t.getFullYear()===y; t.setDate(t.getDate()+1)){
+      const k=fmtDate(t);
+      if(base.has(k) || t.getDay()===0) continue;
+      const p=new Date(t); p.setDate(t.getDate()-1);
+      const n=new Date(t); n.setDate(t.getDate()+1);
+      if(base.has(fmtDate(p)) && base.has(fmtDate(n))) H.set(k,'国民の休日');
+    }
+    // 振替休日: 日曜の祝日の後、最初の祝日でない日
+    [...base.keys()].sort().forEach(k=>{
+      const d=new Date(k+'T00:00:00');
+      if(d.getDay()!==0) return;
+      const t=new Date(d); t.setDate(d.getDate()+1);
+      while(H.has(fmtDate(t))) t.setDate(t.getDate()+1);
+      if(t.getFullYear()===y) H.set(fmtDate(t),'振替休日');
+    });
+    this._cache[y]=H;
+    return H;
+  },
+  name(dateOrStr) {
+    const k = typeof dateOrStr==='string' ? dateOrStr.slice(0,10) : fmtDate(dateOrStr);
+    const y = parseInt(k.slice(0,4),10);
+    if(!(y>=1980 && y<=2099)) return null;
+    return this.forYear(y).get(k) || null;
+  }
+};
+// 日の種別: 'hol'（祝日）/ 'sun' / 'sat' / ''（平日）
+function getDayKind(d){ if(JpHoliday.name(d)) return 'hol'; const w=d.getDay(); return w===0?'sun':(w===6?'sat':''); }
+function dayTextColor(d){ const k=getDayKind(d); return (k==='hol'||k==='sun')?'var(--hol)':(k==='sat'?'var(--sat)':'inherit'); }
+function dayColClass(d){ const k=getDayKind(d); return (k==='hol'||k==='sun')?' weekend-col':(k==='sat'?' sat-col':''); }
+function dayCellBg(d){ const k=getDayKind(d); return (k==='hol'||k==='sun')?'background-color:var(--hol-bg);':(k==='sat'?'background-color:var(--sat-bg);':''); }
+function dayBannerLabel(d){
+  const hol=JpHoliday.name(d);
+  const txt=`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${getDow(d)}）`;
+  const col=dayTextColor(d);
+  return `<span style="color:${col==='inherit'?'inherit':col}">${txt}</span>${hol?` <span class="badge badge-red" style="margin-left:6px">${Security.escapeHtml(hol)}</span>`:''}`;
+}
+function ganttDateHeadHtml(d, label, minWidth, closed) {
+  const hol=JpHoliday.name(d);
+  const tips=[hol, closed?'定休日':null].filter(Boolean).join('・');
+  return `<th class="date-col${dayColClass(d)}${closed?' closed-day':''}"${minWidth?` style="min-width:${minWidth}px"`:''}${tips?` title="${Security.escapeHtml(tips)}"`:''}>${label}<br>`
+    + `<span style="font-size:10px;color:${dayTextColor(d)}">${getDow(d)}</span>`
+    + (hol?`<span class="hol-mark">${Security.escapeHtml(hol)}</span>`:'')
+    + (closed?`<span class="closed-mark">定休</span>`:'') + `</th>`;
+}
+
+/* ================================================================
+   ver.7.7.0 No.4: 施設の定休日（曜日）
+   - 設定マスタの施設編集で曜日を選ぶ（facilities.closed_weekdays: 0=日〜6=土 の配列）
+   - 表示のみ（網掛け）。勤務区分の「休日」とは別のデータなので、シフト登録や給与計算には影響しない
+================================================================ */
+function parseClosedWeekdays(v) {
+  let arr=v;
+  if(typeof arr==='string'){ try { arr=JSON.parse(arr); } catch(_) { arr=[]; } }
+  if(!Array.isArray(arr)) return [];
+  return [...new Set(arr.map(x=>parseInt(x,10)).filter(n=>Number.isInteger(n)&&n>=0&&n<=6))].sort();
+}
+/* ================================================================
+   ver.8.1.0 No.15〜17: 申請の締め切り（施設ごと）
+   facilities.request_deadlines に [{id, ym, period(first/second/full), label, deadline_at, reopen_dates[]}] を保持。
+   ・締め切り後は、その期間の日付への申請（新規・内容の変更）ができない
+   ・判定はサーバー側（DBトリガー）でも行うため、端末の時計を変えても入力できない
+   ・管理者は特定の日だけ「追加募集」として受付を再開できる
+================================================================ */
+const DL_PERIODS = { first:'前半', second:'後半', full:'1か月' };
+function parseRequestDeadlines(v) {
+  let a=v;
+  if(typeof a==='string'){ try { a=JSON.parse(a); } catch(_) { a=[]; } }
+  if(!Array.isArray(a)) return [];
+  return a.map(x=>{
+    if(!x || typeof x!=='object') return null;
+    const ym = /^\d{4}-\d{2}$/.test(x.ym) ? x.ym : null;
+    const period = Object.prototype.hasOwnProperty.call(DL_PERIODS, x.period) ? x.period : 'full';
+    const at = new Date(x.deadline_at);
+    if(!ym || isNaN(at)) return null;
+    const reopen = Array.isArray(x.reopen_dates) ? [...new Set(x.reopen_dates.filter(d=>typeof d==='string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && d.startsWith(ym)))].sort() : [];
+    return { id: Security.sanitizeStr(String(x.id||''),40) || ('dl'+ym+period), ym, period,
+      label: Security.sanitizeStr(String(x.label||''),40) || autoDeadlineLabel(ym, period), deadlineAt: at.toISOString(), reopenDates: reopen };
+  }).filter(Boolean).sort((p,q)=>p.deadlineAt.localeCompare(q.deadlineAt));
+}
+function serializeDeadlines(list) {
+  return list.map(x=>({ id:x.id, ym:x.ym, period:x.period, label:x.label, deadline_at:x.deadlineAt, reopen_dates:x.reopenDates }));
+}
+function autoDeadlineLabel(ym, period) {
+  const m=parseInt(String(ym).slice(5,7),10);
+  return `${m}月${period==='first'?'前半':(period==='second'?'後半':'')}分シフト`;
+}
+function deadlineCovers(dl, dateStr) {
+  if(!dl || dateStr.slice(0,7)!==dl.ym) return false;
+  const d=parseInt(dateStr.slice(8,10),10);
+  return dl.period==='full' || (dl.period==='first' && d<=15) || (dl.period==='second' && d>=16);
+}
+function getFacilityDeadlines(fid) { return AppState.facilities.find(f=>f.id===fid)?.requestDeadlines || []; }
+// その日・その施設への申請が締め切り済みか（追加募集の日は受付中）
+function getRequestLock(fid, dateStr, nowMs) {
+  const now = nowMs ?? Date.now();
+  const dl = getFacilityDeadlines(fid).find(x=>deadlineCovers(x, dateStr));
+  if(!dl) return { locked:false, dl:null, reopened:false };
+  const closed = new Date(dl.deadlineAt).getTime() <= now;
+  const reopened = closed && dl.reopenDates.includes(dateStr);
+  return { locked: closed && !reopened, dl, reopened };
+}
+function deadlineState(dl, nowMs) {
+  const now = nowMs ?? Date.now();
+  const left = new Date(dl.deadlineAt).getTime() - now;
+  if(left<=0) return 'closed';
+  return left <= 2*24*60*60*1000 ? 'soon' : 'open';   // 締め切り2日前から強調
+}
+function fmtDeadline(iso) {
+  const d=new Date(iso);
+  return `${d.getMonth()+1}月${d.getDate()}日(${getDow(d)}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function fmtLeft(iso, nowMs) {
+  const ms = new Date(iso).getTime() - (nowMs ?? Date.now());
+  if(ms<=0) return '';
+  return ms < 86400000 ? `あと${Math.max(1, Math.ceil(ms/3600000))}時間` : `あと${Math.floor(ms/86400000)}日`;
+}
+function fmtMdDow(ds) { const d=new Date(ds+'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()}(${getDow(d)})`; }
+function isDeadlineErr(err) { return /DEADLINE_PASSED/.test(err?.message||''); }
+
+function getFacilityClosedWeekdays(fid) { return AppState.facilities.find(f=>f.id===fid)?.closedWeekdays || []; }
+function isFacilityClosedDay(fid, d) { return !!fid && getFacilityClosedWeekdays(fid).includes(d.getDay()); }
+function closedWeekdaysLabel(arr) { const W=['日','月','火','水','木','金','土']; return (arr||[]).map(i=>W[i]).join('・'); }
+const closedDayBadge = '<span class="badge badge-gray" style="margin-left:6px">定休日</span>';
+
+/* ================================================================
    #14 休憩時間（労基法34条：6時間超で45分以上、8時間超で60分以上の休憩が必要）
 ================================================================ */
 function calcWorkMinutes(start, end) {
@@ -1666,21 +2186,62 @@ function getEffectiveShiftTimes(shift) {
   }
   return {start: shift?.start, end: shift?.end, isActual: false};
 }
-function calcLegalBreakMinutes(workMinutes) {
-  if(workMinutes>8*60) return 60;
-  if(workMinutes>6*60) return 45;
+/* ver.7.6.0 No.10: 休憩時間のルール（労働基準法34条）
+   法律の基準は「実働時間」（＝拘束時間−休憩）。画面で入力するのは拘束時間（開始〜終了）なので、そこから逆算する。
+   ・自動設定値（calcAutoBreakMinutes）… 拘束6時間以下:0分／6時間超〜8時間45分以下:45分／8時間45分超:60分
+   ・保存できる最小値（calcLegalBreakMinutes）… 実働が6時間以内なら0分、8時間以内なら45分、超えるなら60分を
+     満たす最小の休憩。例: 拘束6時間30分なら30分休憩で実働6時間となり適法（手動修正で対応可能）。 */
+function calcAutoBreakMinutes(spanMinutes) {
+  if(spanMinutes>8*60+45) return 60;
+  if(spanMinutes>6*60) return 45;
   return 0;
+}
+function calcLegalBreakMinutes(spanMinutes) {
+  const T=spanMinutes||0;
+  if(T<=360) return 0;          // 実働6時間以下 → 休憩不要
+  if(T<=405) return T-360;      // 休憩を取って実働を6時間以下にすれば足りる（最大45分）
+  if(T<=525) return 45;         // 実働8時間以下 → 45分
+  if(T<=540) return T-480;      // 実働を8時間以下に収める（45〜60分）
+  return 60;                    // 実働8時間超 → 60分
+}
+function fmtHm(min){ const m=Math.max(0,Math.round(min||0)); return `${Math.floor(m/60)}時間${m%60?`${m%60}分`:''}`; }
+function breakRuleMessage(spanMin, breakMin) {
+  const legal=calcLegalBreakMinutes(spanMin);
+  return `拘束${fmtHm(spanMin)}の場合、休憩は${legal}分以上必要です（法定休憩を下回るため保存できません。現在: ${breakMin}分）`;
+}
+// 旧データ（break_manual 未設定）は、日タブで時間帯を設定済み、または自動値と違う分数が入っていれば手動扱いにする
+function isShiftBreakManual(shift) {
+  if(!shift) return false;
+  if(shift.breakManual===true) return true;
+  if(shift.breakManual===false) return false;
+  if(shift.breakStart && shift.breakEnd) return true;
+  if(shift.breakMinutes!=null && shift.breakMinutes!==calcAutoBreakMinutes(calcWorkMinutes(shift.start, shift.end))) return true;
+  return false;
+}
+// break_manual 列が未追加の環境でも保存を止めないよう、列エラーのときは列を外して再送する
+async function saveShiftRowWithBreakFlag(existingId, payload) {
+  const send = (p) => existingId ? DB.patch('shifts', p, `?id=eq.${encodeURIComponent(existingId)}`) : DB.post('shifts', p);
+  try { return await send(payload); }
+  catch(err) {
+    if('break_manual' in payload && /break_manual/i.test(err.message||'')) {
+      Security.log('BREAK_MANUAL_COLUMN_MISSING', err.message, 'WARN');
+      const p2={...payload}; delete p2.break_manual;
+      return await send(p2);
+    }
+    throw err;
+  }
 }
 // 管理者画面のガント表セルに表示する休憩時間の目印（6時間超勤務のみ表示。法定休憩を満たしていなければ赤で警告）
 function breakBadgeHtml(shift) {
   if(!shift || shift.isOffDuty || shift.isAnnual) return '';
   const workMin=calcWorkMinutes(shift.start, shift.end);
   const legal=calcLegalBreakMinutes(workMin);
-  if(legal<=0) return '';
+  if(workMin<=360) return '';
   const cur=shift.breakMinutes!=null ? shift.breakMinutes : null;
   const ok=cur!=null && cur>=legal;
   const label=cur!=null ? `${cur}分` : '未設定';
-  const title=ok ? `休憩${cur}分（法定${legal}分以上を満たしています）` : `要休憩: 法定${legal}分以上のところ、現在の設定は${label}です`;
+  const mode=isShiftBreakManual(shift)?'手動':'自動';
+  const title=ok ? `休憩${cur}分・${mode}（法定${legal}分以上を満たしています）` : `要休憩: 法定${legal}分以上のところ、現在の設定は${label}です`;
   return ` <span class="badge ${ok?'badge-blue':'badge-red'}" style="font-size:9px;padding:0 4px" title="${title}">☕${cur!=null?cur:'!'}</span>`;
 }
 // シフト入力モーダルの開始/終了時刻・休憩時間から、法定休憩を満たしているか判定してアラート表示を更新する
@@ -1688,19 +2249,45 @@ function updateShiftBreakAlert() {
   const startEl=document.getElementById('shift-start'), endEl=document.getElementById('shift-end');
   const breakEl=document.getElementById('shift-break-minutes');
   const alertEl=document.getElementById('shift-break-alert');
+  const modeEl=document.getElementById('shift-break-mode');
   if(!startEl||!endEl||!breakEl||!alertEl) return;
   const isAnnual=document.getElementById('shift-is-annual')?.checked;
-  if(isAnnual){ alertEl.style.display='none'; return; }
-  const workMin=calcWorkMinutes(startEl.value, endEl.value);
-  const legalBreak=calcLegalBreakMinutes(workMin);
+  breakEl.disabled=!!isAnnual || !!AppState.shiftModalLocked;
+  if(isAnnual){ alertEl.style.display='none'; if(modeEl) modeEl.innerHTML=''; return; }
+  const spanMin=calcWorkMinutes(startEl.value, endEl.value);
+  const legalBreak=calcLegalBreakMinutes(spanMin);
   const curBreak=Security.sanitizeNum(breakEl.value||0,0,480);
-  if(legalBreak<=0){ alertEl.style.display='none'; return; }
+  // ver.7.6.0 No.10: 自動／手動の表示と実働時間
+  if(modeEl){
+    const tag = AppState.shiftBreakManual
+      ? `<span class="bm-tag bm-manual">手動</span><button type="button" class="btn btn-outline btn-sm" onclick="resetShiftBreakAuto()">自動に戻す（${calcAutoBreakMinutes(spanMin)}分）</button>`
+      : `<span class="bm-tag bm-auto">自動</span><span>法定ルールで設定（時間を変えると再計算）</span>`;
+    modeEl.innerHTML = `${tag}<span style="margin-left:auto">実働 ${fmtHm(Math.max(0,spanMin-curBreak))}</span>`;
+  }
   if(curBreak<legalBreak){
     alertEl.style.display='block';
-    alertEl.textContent=`⚠ 勤務時間が${(workMin/60).toFixed(1)}時間のため、労基法上${legalBreak}分以上の休憩が必要です（現在の設定: ${curBreak}分）`;
+    alertEl.style.background='var(--danger-soft)'; alertEl.style.color='#991b1b'; alertEl.style.borderColor='var(--danger)';
+    alertEl.textContent='⛔ '+breakRuleMessage(spanMin, curBreak);
   } else {
     alertEl.style.display='none';
   }
+}
+// 開始・終了時刻の変更：自動モードなら法定ルールで休憩を再計算（手動で修正済みなら値を保つ）
+function onShiftTimeChange() {
+  const breakEl=document.getElementById('shift-break-minutes');
+  if(!AppState.shiftBreakManual && breakEl){
+    breakEl.value=calcAutoBreakMinutes(calcWorkMinutes(document.getElementById('shift-start').value, document.getElementById('shift-end').value));
+  }
+  updateShiftBreakAlert();
+}
+// 休憩時間を直接入力したら手動扱いにする
+function onShiftBreakInput() {
+  AppState.shiftBreakManual = true;
+  updateShiftBreakAlert();
+}
+function resetShiftBreakAuto() {
+  AppState.shiftBreakManual = false;
+  onShiftTimeChange();
 }
 function fmtDate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function todayStr(){ return fmtDate(new Date()); }
@@ -1751,6 +2338,7 @@ async function doLogin() {
     try {
       await loadAllData();
       await initApp();
+      SessionStore.save(); // ver.7.5.3 No.1
     } catch(loadErr) {
       AppState.currentUser = null;
       AppState.sessionToken = null;
@@ -1788,6 +2376,7 @@ async function doAdminLogin() {
       await loadAllData();
       closeAdminLoginModal();
       await initApp();
+      SessionStore.save(); // ver.7.5.3 No.1
     } catch(loadErr) {
       AppState.currentUser = null;
       AppState.sessionToken = null;
@@ -1802,6 +2391,7 @@ async function doAdminLogin() {
 
 function doLogout() {
   Security.log('LOGOUT', AppState.currentUser?.id||'');
+  SessionStore.clear(); // ver.7.5.3 No.1
   AppState.currentUser = null;
   AppState.sessionToken = null;
   AppState.shifts = {};
@@ -1847,6 +2437,7 @@ function showTab(name) {
   document.getElementById('tab-'+name)?.classList.add('active');
   document.querySelectorAll(`.nav-item[onclick="showTab('${name}')"]`).forEach(n=>n.classList.add('active'));
   Security.log('TAB',name);
+  SessionStore.saveTab(name); // ver.7.5.3 No.1
   if(name==='employee') refreshEmployeeTableWithLeave();
   if(name==='admin-users') renderAdminUsersTable();
   if(name==='staff-all-shift') loadAndRenderStaffAllShift();
@@ -1889,6 +2480,7 @@ async function initAdminApp() {
   // タブ一番左（＝無効化されていない先頭の施設）を既定選択にする
   AppState.currentFacilityId = AppState.facilities.find(f=>!f.deletedAt)?.id || null;
   AppState.currentDayDate = fmtDate(now);
+  AppState.shiftPeriod = defaultShiftPeriod(); // ver.7.6.0 No.8: 今日の日付から前半・後半を自動で選ぶ
   renderFacilityTabs();
   renderFacilityTable();
   renderEmployeeTable();
@@ -1924,11 +2516,127 @@ async function loadShiftsAndRequests(ym) {
    スタッフ画面の「申請中」表示を自動的に消す（従来は管理者が1件ずつ手作業で処理する必要があった）
    ・確定シフトが作成済みのものは status を 'confirmed' に統一
    ・確定シフトが作成されなかった（見送られた）ものは status を 'rejected' に更新
+   ・ver.7.8.0 No.11: 見送られた「勤務の希望」は 'rejected' ではなく空き番（is_offduty のシフトを作成し status='offduty'）にする。
+     年休の希望は従来どおり 'rejected'。「申請状態へ戻す」では、ここで作成した空き番を削除して元に戻す
      → #5の修正によりスタッフ画面では rejected は「タップして入力」表示に戻るため、
        結果的に「申請中」バッジは消え、スタッフは翌月分の希望を再入力できる状態になる
    ・処理した行には auto_closed_at を記録し、対象月が「月次確定済み」かどうかをボタン表記に反映する。
      確定済みの月は「申請状態へ戻す」ボタンに切り替わり、押すと確定前（申請中）の状態に一括で戻せる。
 ================================================================ */
+/* ver.8.0.0 No.13: 一斉確定
+   対象は選択中の施設・年月のうち「表示中の期間」（1か月／前半／後半）。
+   ・仮確定と確定解除中のシフト → 確定（スタッフ画面に公開）。確定解除中だったものは内容が変わっていれば「変更あり」
+   ・申請中の希望 → シフトがあれば「確定」（空き番なら「空き番」）、無ければ勤務希望は空き番を作成、年休希望は非採用
+   ・すべてに同じ処理時刻を記録し、「一斉確定を取り消す」で直前の1回分を元に戻せる */
+function getPublishPeriod(ym) {
+  const p = AppState.shiftPeriod || 'full';
+  const days = getPeriodDays(ym, p);
+  const m = parseInt(ym.slice(5,7),10);
+  const label = `${ym.slice(0,4)}年${m}月${p==='first'?'前半':(p==='second'?'後半':'')}（${m}/${days[0].getDate()}〜${m}/${days[days.length-1].getDate()}）`;
+  return { dates:new Set(days.map(fmtDate)), label };
+}
+async function runLimited(items, fn, limit=5) {
+  let i=0; const errs=[];
+  const worker=async()=>{ while(i<items.length){ const it=items[i++]; try { await fn(it); } catch(e){ errs.push(e); } } };
+  await Promise.all(Array.from({length:Math.min(limit, items.length)}, worker));
+  return errs;
+}
+async function publishPeriodShifts() {
+  if(!Auth.requireAdmin()) return;
+  const fid = AppState.currentFacilityId;
+  const ym = document.getElementById('shift-month').value;
+  if(!fid || !ym){ showNotif('施設と対象月を選択してください','error'); return; }
+  const { dates, label } = getPublishPeriod(ym);
+  const shifts = getShiftsFor(fid, ym).filter(sh=>dates.has(sh.date));
+  const targets = shifts.filter(sh=>sh.publishStatus==='draft' || sh.publishStatus==='reopened');
+  const pending = AppState.staffRequests.filter(r=>r.facilityId===fid && r.ym===ym && dates.has(r.date) && r.status==='pending');
+  const hasShift = r => shifts.some(sh=>sh.empId===r.empId && sh.date===r.date);
+  const toOff = pending.filter(r=>!hasShift(r) && !r.isAnnual);
+  const toReject = pending.filter(r=>!hasShift(r) && r.isAnnual);
+  if(!targets.length && !pending.length){ showNotif(`${label}に一斉確定する仮確定・申請はありません`); return; }
+  const reopenedCnt = targets.filter(sh=>sh.publishStatus==='reopened').length;
+  const ok = confirm(`${label} を一斉確定します。
+・仮確定 ${targets.length}件${reopenedCnt?`（うち確定解除中 ${reopenedCnt}件）`:''}を確定し、スタッフ画面に公開します
+・未採用の勤務希望 ${toOff.length}件はまとめて空き番にします（申請していた時間は表示に残ります）
+・未採用の年休希望 ${toReject.length}件は非採用にします
+
+よろしいですか？`);
+  if(!ok) return;
+  showLoading('一斉確定中...');
+  const batch = new Date().toISOString();
+  let errCnt=0, lastErr=null;
+  try {
+    // 1) 仮確定・確定解除中のシフトを公開
+    const e1 = await runLimited(targets, async sh=>{
+      const body = { publish_status:'published', published_snapshot:null };
+      if(sh.publishStatus==='draft') body.published_at = batch; // 取り消しの対象は仮確定から公開したものだけ
+      if(sh.publishStatus==='reopened' && shiftContentDiffers(sh, sh.publishedSnapshot)) body.republished_at = batch;
+      await DB.patch('shifts', body, `?id=eq.${encodeURIComponent(sh.id)}`);
+    });
+    // 2) 未採用の勤務希望 → 空き番（公開済みで作成）
+    const e2 = await runLimited(toOff, async r=>{
+      await DB.post('shifts', {emp_id:r.empId, facility_id:fid, date:r.date, ym, start_time:'00:00', end_time:'00:00',
+        is_annual:false, is_offduty:true, break_minutes:null, break_start:null, break_end:null, publish_status:'published', published_at:batch});
+    });
+    // 3) 申請の状態を更新
+    const offKeys = new Set(toOff.map(r=>r.empId+'@'+r.date));
+    const e3 = await runLimited(pending, async r=>{
+      const sh = shifts.find(x=>x.empId===r.empId && x.date===r.date);
+      const st = sh ? (sh.isOffDuty?'offduty':'confirmed') : (offKeys.has(r.empId+'@'+r.date) ? 'offduty' : 'rejected');
+      await DB.patch('shift_requests', {status:st, auto_closed_at:batch}, `?id=eq.${encodeURIComponent(r.id)}`);
+    });
+    const errs=[...e1,...e2,...e3]; errCnt=errs.length; lastErr=errs[0]||null;
+    errs.forEach(e=>Security.log('PUBLISH_ROW_ERR', e.message, 'ERROR'));
+    Security.log('PUBLISH', `${fid} ${ym} ${label} shifts:${targets.length} offduty:${toOff.length} rejected:${toReject.length} err:${errCnt}`);
+    await Promise.all([loadShiftsForMonth(fid, ym), loadRequestsForMonth(ym)]);
+    renderShiftView();
+    updateMonthCloseButtonState();
+    if(errCnt && isPublishColumnErr(lastErr)) showNotif(PUBLISH_COLUMN_MSG,'error');
+    else showNotif(`一斉確定しました（確定:${targets.length}件、空き番:${toOff.length}件、非採用:${toReject.length}件${errCnt?`、失敗:${errCnt}件`:''}）`, errCnt?'error':'success');
+  } finally { hideLoading(); }
+}
+// 直前の一斉確定を取り消す（その回に公開した仮確定を仮確定へ、作成した空き番を削除、申請を申請中へ）
+function findLastPublishBatch(fid, ym) {
+  const { dates } = getPublishPeriod(ym);
+  const stamps = AppState.staffRequests.filter(r=>r.facilityId===fid && r.ym===ym && dates.has(r.date) && r.autoClosedAt).map(r=>r.autoClosedAt)
+    .concat(getShiftsFor(fid, ym).filter(sh=>dates.has(sh.date) && sh.publishStatus==='published' && sh.publishedAt && !sh.republishedAt).map(sh=>sh.publishedAt));
+  if(!stamps.length) return null;
+  const last = stamps.sort().pop();
+  const reqs = AppState.staffRequests.filter(r=>r.facilityId===fid && r.ym===ym && r.autoClosedAt===last);
+  const pubShifts = getShiftsFor(fid, ym).filter(sh=>sh.publishStatus==='published' && sh.publishedAt===last && !sh.republishedAt);
+  if(!reqs.length && !pubShifts.length) return null;
+  return { stamp:last, reqs, pubShifts };
+}
+async function undoLastPublish() {
+  if(!Auth.requireAdmin()) return;
+  const fid = AppState.currentFacilityId;
+  const ym = document.getElementById('shift-month').value;
+  const b = fid && ym ? findLastPublishBatch(fid, ym) : null;
+  if(!b){ showNotif('取り消せる一斉確定がありません'); updateMonthCloseButtonState(); return; }
+  const when = new Date(b.stamp).toLocaleString('ja-JP');
+  const autoOff = b.pubShifts.filter(sh=>sh.isOffDuty && b.reqs.some(r=>r.empId===sh.empId && r.date===sh.date && r.status==='offduty'));
+  const toDraft = b.pubShifts.filter(sh=>!autoOff.includes(sh));
+  if(!confirm(`${when} の一斉確定を取り消します。
+・公開したシフト ${toDraft.length}件 → 仮確定に戻します（スタッフ画面から見えなくなります）
+・自動で作成した空き番 ${autoOff.length}件 → 削除します
+・申請 ${b.reqs.length}件 → 申請中に戻します
+※ スタッフがすでに確認している可能性があります。よろしいですか？`)) return;
+  showLoading('取り消し中...');
+  try {
+    const errs = [
+      ...await runLimited(toDraft, sh=>DB.patch('shifts', {publish_status:'draft', published_at:null}, `?id=eq.${encodeURIComponent(sh.id)}`)),
+      ...await runLimited(autoOff, sh=>DB.del('shifts', `?id=eq.${encodeURIComponent(sh.id)}`)),
+      ...await runLimited(b.reqs, r=>DB.patch('shift_requests', {status:'pending', auto_closed_at:null}, `?id=eq.${encodeURIComponent(r.id)}`))
+    ];
+    Security.log('PUBLISH_UNDO', `${fid} ${ym} ${b.stamp} draft:${toDraft.length} offdel:${autoOff.length} req:${b.reqs.length} err:${errs.length}`, 'WARN');
+    await Promise.all([loadShiftsForMonth(fid, ym), loadRequestsForMonth(ym)]);
+    renderShiftView();
+    updateMonthCloseButtonState();
+    showNotif(`一斉確定を取り消しました${errs.length?`（失敗:${errs.length}件）`:''}`, errs.length?'error':'success');
+  } finally { hideLoading(); }
+}
+
+// 旧：月次確定（ver.8.0.0 で一斉確定に置き換え。画面からは呼ばれない）
 async function closeMonthShiftRequests() {
   const fid = AppState.currentFacilityId;
   const ym = document.getElementById('shift-month').value;
@@ -1937,31 +2645,38 @@ async function closeMonthShiftRequests() {
   if(!pending.length){ showNotif('申請中のシフト希望はありません'); return; }
   const ok = confirm(`${ym} の申請中シフト希望 ${pending.length}件を一括処理します。
 ・確定シフトが作成済み → 「確定」として処理
-・確定シフトが未作成 → 「非採用」として処理し、スタッフ画面の「申請中」表示を消します
+・確定シフトが未作成の勤務希望 → まとめて「空き番」にします（申請していた時間は表示に残ります）
+・確定シフトが未作成の年休希望 → 「非採用」として処理します
 
 処理後は「申請状態へ戻す」ボタンからいつでも取り下げて元に戻せます。よろしいですか？`);
   if(!ok) return;
   showLoading('月次確定処理中...');
   try {
-    let confirmedCnt=0, closedCnt=0, errCnt=0, lastErrMsg='';
+    let confirmedCnt=0, closedCnt=0, offdutyCnt=0, errCnt=0, lastErrMsg='';
     const nowIso = new Date().toISOString();
     for(const req of pending){
       const hasShift = getShiftsFor(fid, ym).some(s=>s.empId===req.empId && s.date===req.date);
-      const newStatus = hasShift ? 'confirmed' : 'rejected';
+      const toOffduty = !hasShift && !req.isAnnual; // ver.7.8.0 No.11
+      const newStatus = hasShift ? 'confirmed' : (toOffduty ? 'offduty' : 'rejected');
       try {
+        if(toOffduty){
+          await DB.post('shifts', {emp_id:req.empId, facility_id:fid, date:req.date, ym, start_time:'00:00', end_time:'00:00',
+            is_annual:false, is_offduty:true, break_minutes:null, break_start:null, break_end:null});
+        }
         await DB.patch('shift_requests', {status:newStatus, auto_closed_at:nowIso}, `?id=eq.${encodeURIComponent(req.id)}`);
         req.status = newStatus;
         req.autoClosedAt = nowIso;
-        if(newStatus==='confirmed') confirmedCnt++; else closedCnt++;
+        if(newStatus==='confirmed') confirmedCnt++; else if(newStatus==='offduty') offdutyCnt++; else closedCnt++;
       } catch(e) {
         errCnt++; lastErrMsg = e.message||'';
         Security.log('MONTH_CLOSE_ROW_ERR', `${req.empId}@${req.date}: ${e.message}`, 'ERROR');
       }
     }
-    Security.log('MONTH_CLOSE', `${fid} ${ym} confirmed:${confirmedCnt} closed:${closedCnt} err:${errCnt}`);
+    Security.log('MONTH_CLOSE', `${fid} ${ym} confirmed:${confirmedCnt} offduty:${offdutyCnt} closed:${closedCnt} err:${errCnt}`);
+    if(offdutyCnt) await loadShiftsForMonth(fid, ym);
     renderShiftView();
     updateMonthCloseButtonState();
-    let summary = `月次確定処理が完了しました（確定:${confirmedCnt}件、非採用:${closedCnt}件${errCnt?`、失敗:${errCnt}件`:''}）`;
+    let summary = `月次確定処理が完了しました（確定:${confirmedCnt}件、空き番:${offdutyCnt}件、非採用:${closedCnt}件${errCnt?`、失敗:${errCnt}件`:''}）`;
     if(errCnt && /column .*auto_closed_at/i.test(lastErrMsg)) summary='月次確定に必要なカラムがDBに未追加です。Supabaseのshift_requestsテーブルにauto_closed_at(timestamptz, nullable)を追加してください';
     showNotif(summary, errCnt?'error':'success');
   } finally {
@@ -1980,9 +2695,14 @@ async function reopenMonthShiftRequests() {
   if(!ok) return;
   showLoading('取り下げ処理中...');
   try {
-    let cnt=0, errCnt=0;
+    let cnt=0, errCnt=0, removedOff=0;
     for(const req of closed){
       try {
+        // ver.7.8.0 No.11: 月次確定で作った空き番は削除して元に戻す（その後に通常シフトへ変更済みのものは残す）
+        if(req.status==='offduty'){
+          const off=getShiftsFor(fid, ym).find(s=>s.empId===req.empId && s.date===req.date && s.isOffDuty);
+          if(off?.id){ await DB.del('shifts', `?id=eq.${encodeURIComponent(off.id)}`); removedOff++; }
+        }
         await DB.patch('shift_requests', {status:'pending', auto_closed_at:null}, `?id=eq.${encodeURIComponent(req.id)}`);
         req.status='pending'; req.autoClosedAt=null;
         cnt++;
@@ -1991,7 +2711,8 @@ async function reopenMonthShiftRequests() {
         Security.log('MONTH_REOPEN_ROW_ERR', `${req.empId}@${req.date}: ${e.message}`, 'ERROR');
       }
     }
-    Security.log('MONTH_REOPEN', `${fid} ${ym} reverted:${cnt} err:${errCnt}`);
+    Security.log('MONTH_REOPEN', `${fid} ${ym} reverted:${cnt} offdutyRemoved:${removedOff} err:${errCnt}`);
+    if(removedOff) await loadShiftsForMonth(fid, ym);
     renderShiftView();
     updateMonthCloseButtonState();
     showNotif(`月次確定を取り下げました（${cnt}件を申請中に戻しました${errCnt?`、失敗:${errCnt}件`:''}）`, errCnt?'error':'success');
@@ -2002,11 +2723,23 @@ async function reopenMonthShiftRequests() {
 
 // #6 修正: 現在の施設・対象月が「月次確定済み」かどうかを判定し、ボタンの表記/挙動を切り替える
 function updateMonthCloseButtonState() {
+  // ver.8.0.0 No.13: 一斉確定ボタン（表示中の期間の未公開件数）と取り消しボタン
   const btn = document.getElementById('month-close-btn');
   const label = document.getElementById('month-close-btn-label');
   if(!btn || !label) return;
   const fid = AppState.currentFacilityId;
   const ym = document.getElementById('shift-month')?.value;
+  if(fid && ym){
+    const { dates } = getPublishPeriod(ym);
+    const n = getShiftsFor(fid, ym).filter(sh=>dates.has(sh.date) && sh.publishStatus!=='published').length;
+    label.textContent = n ? `一斉確定（${n}件）` : '一斉確定';
+    btn.classList.remove('btn-outline'); btn.classList.add('btn-success');
+    btn.setAttribute('onclick', 'publishPeriodShifts()');
+    btn.title = '表示中の期間の仮確定をまとめて確定し、スタッフ画面に公開します（未採用の勤務希望は空き番にします）';
+    const undo = document.getElementById('publish-undo-btn');
+    if(undo) undo.style.display = findLastPublishBatch(fid, ym) ? '' : 'none';
+    return;
+  }
   const isClosed = AppState.staffRequests.some(r=>r.facilityId===fid && r.ym===ym && r.autoClosedAt);
   if(isClosed){
     label.textContent = '申請状態へ戻す';
@@ -2017,7 +2750,7 @@ function updateMonthCloseButtonState() {
     label.textContent = '月次確定';
     btn.classList.remove('btn-outline'); btn.classList.add('btn-success');
     btn.setAttribute('onclick', 'closeMonthShiftRequests()');
-    btn.title = '申請中のまま残っているシフト希望を一括処理し、スタッフ画面の「申請中」表示を消します';
+    btn.title = '申請中のシフト希望を一括処理します（未採用の勤務希望はまとめて空き番にします）';
   }
 }
 
@@ -2047,7 +2780,10 @@ async function loadAndRenderStaffLeaveBalance() {
       document.getElementById('staff-leave-detail').textContent='入社6ヶ月経過後に付与されます';
       return;
     }
-    const rows = await DB.get('shifts', `?emp_id=eq.${encodeURIComponent(u.id)}&is_annual=eq.true&date=gte.${bal.cycle.cycleStart}&date=lte.${bal.cycle.cycleEnd}&select=date`);
+    const q = `?emp_id=eq.${encodeURIComponent(u.id)}&is_annual=eq.true&date=gte.${bal.cycle.cycleStart}&date=lte.${bal.cycle.cycleEnd}`;
+    let rows;
+    try { rows = (await DB.get('shifts', q+'&select=date,publish_status')).filter(r=>r.publish_status!=='draft'); } // ver.8.0.0
+    catch(_) { rows = await DB.get('shifts', q+'&select=date'); }
     const used = rows.length;
     const remain = Math.max(bal.grantDays-used,0);
     document.getElementById('staff-leave-remain').textContent = `${remain}日`;
@@ -2108,7 +2844,7 @@ function renderStaffAllShiftDay(dateStr) {
 
   let html = `<div class="day-date-banner">
     <button class="day-nav-btn" onclick="changeStaffAllShiftDate('${fmtDate(prevD)}')">← 前日</button>
-    <span>${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${getDow(d)}）${dateStr===todayStr?'<span class="badge badge-blue" style="margin-left:8px">本日</span>':''}</span>
+    <span>${dayBannerLabel(d)}${isFacilityClosedDay(fid,d)?closedDayBadge:''}${dateStr===todayStr?'<span class="badge badge-blue" style="margin-left:8px">本日</span>':''}</span>
     <button class="day-nav-btn" onclick="changeStaffAllShiftDate('${fmtDate(nextD)}')">翌日 →</button>
   </div>
   <div style="margin:8px 0 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -2139,7 +2875,7 @@ function renderStaffAllShiftDay(dateStr) {
         }).join('');
       }
     }
-    html += `<tr class="gantt-row"><td class="name-cell">${Security.escapeHtml(e2.name)}${e2.id===u.id?'<span class="badge badge-blue" style="margin-left:6px;font-size:10px">自分</span>':''}${actLine}</td>`;
+    html += `<tr class="gantt-row"><td class="name-cell">${Security.escapeHtml(e2.name)}${e2.id===u.id?'<span class="badge badge-blue" style="margin-left:6px;font-size:10px">自分</span>':''}${shift&&shift.adjusting?'<span class="staff-cal-label adjusting" style="display:inline-block;margin-left:6px">調整中</span>':''}${actLine}</td>`;
     for(let h=0;h<24;h++){
       for(let hf=0;hf<2;hf++){
         const ts = `${String(h).padStart(2,'0')}:${hf===0?'00':'30'}`;
@@ -2201,7 +2937,8 @@ function renderFacilityTable() {
     const cnt = AppState.employees.filter(e=>!e.deletedAt && e.facilityId===f.id).length;
     const tr = document.createElement('tr');
     if(f.deletedAt) tr.style.cssText='opacity:.55;background:var(--bg-subtle,#f8f8f8)';
-    const nameCell = f.deletedAt ? `${Security.escapeHtml(f.name)} <span class="badge badge-gray" style="font-size:9px">無効化済み</span>` : Security.escapeHtml(f.name);
+    const closedTxt = (f.closedWeekdays||[]).length ? `<div style="font-size:11px;color:var(--text-muted);font-weight:400">定休: ${closedWeekdaysLabel(f.closedWeekdays)}</div>` : ''; // ver.7.7.0 No.4
+    const nameCell = (f.deletedAt ? `${Security.escapeHtml(f.name)} <span class="badge badge-gray" style="font-size:9px">無効化済み</span>` : Security.escapeHtml(f.name)) + closedTxt;
     const actionsCell = f.deletedAt
       ? `<button class="btn btn-outline btn-sm" onclick="restoreFacility('${Security.escapeHtml(f.id)}')">復元</button>`
       : `<button class="btn btn-outline btn-sm" onclick="openEditFacilityModal('${Security.escapeHtml(f.id)}')">編集</button> <button class="btn btn-outline btn-sm" onclick="openFacilityActivitiesModal('${Security.escapeHtml(f.id)}')">個別項目</button> <button class="btn btn-outline btn-sm" onclick="deleteFacility('${Security.escapeHtml(f.id)}')">削除</button>`;
@@ -2233,6 +2970,10 @@ function openEditFacilityModal(id) {
   document.getElementById('edit-facility-id').value = f.id;
   document.getElementById('edit-facility-name').value = f.name;
   document.getElementById('edit-facility-name-error').style.display='none';
+  // ver.7.7.0 No.4: 定休曜日
+  const W=['日','月','火','水','木','金','土'], cur=new Set(f.closedWeekdays||[]);
+  document.getElementById('edit-facility-closed').innerHTML = W.map((w,i)=>
+    `<label><input type="checkbox" value="${i}"${cur.has(i)?' checked':''}>${w}</label>`).join('');
   openModal('modal-edit-facility');
 }
 
@@ -2241,15 +2982,26 @@ async function saveFacilityEdit() {
   const name = Security.sanitizeStr(document.getElementById('edit-facility-name').value, 50);
   if(!name){document.getElementById('edit-facility-name-error').style.display='block';return;}
   document.getElementById('edit-facility-name-error').style.display='none';
+  const closed = parseClosedWeekdays([...document.querySelectorAll('#edit-facility-closed input:checked')].map(cb=>cb.value)); // ver.7.7.0 No.4
   showLoading('保存中...');
   try {
-    await DB.patch('facilities', {name}, `?id=eq.${encodeURIComponent(id)}`);
+    let closedSaved = true;
+    try {
+      await DB.patch('facilities', {name, closed_weekdays: closed}, `?id=eq.${encodeURIComponent(id)}`);
+    } catch(colErr) {
+      if(!/closed_weekdays/i.test(colErr.message||'')) throw colErr;
+      closedSaved = false; // 列が未追加の環境では施設名だけ保存する
+      Security.log('CLOSED_WEEKDAYS_COLUMN_MISSING', colErr.message, 'WARN');
+      await DB.patch('facilities', {name}, `?id=eq.${encodeURIComponent(id)}`);
+    }
     const f=AppState.facilities.find(x=>x.id===id);
-    if(f) f.name=name;
-    Security.log('FAC_EDIT',id);
+    if(f){ f.name=name; if(closedSaved) f.closedWeekdays=closed; }
+    Security.log('FAC_EDIT',`${id} closed:${closed.join(',')}`);
     closeModal('modal-edit-facility');
     renderFacilityTabs(); renderFacilityTable(); updateFacilityDropdowns();
-    showNotif('施設名を更新しました','success');
+    if(AppState.currentShiftView) renderShiftView();
+    if(closedSaved) showNotif('施設情報を更新しました','success');
+    else showNotif('施設名は更新しましたが、定休日を保存する列がDBに未追加です。Supabaseでfacilitiesテーブルにclosed_weekdaysを追加してください','error');
   } catch(err) {
     showNotif('更新に失敗しました','error');
     Security.log('FAC_EDIT_ERR', err.message, 'ERROR');
@@ -2614,6 +3366,13 @@ function renderEmployeeTable() {
       const f = AppState.facilities.find(x=>x.id===fid);
       return f ? ` <span class="badge badge-blue" style="font-size:9px" title="兼務施設">+${Security.escapeHtml(f.name)}</span>` : '';
     }).join('');
+    // ver.7.7.0 No.7: 職種（施設ごと）
+    const jobBadges = Object.keys(e.jobItems||{}).map(fid=>{
+      const jn=getEmpJobName(e, fid); if(!jn) return '';
+      const multi=Object.keys(e.jobItems).length>1 || fid!==e.facilityId;
+      const fn=AppState.facilities.find(x=>x.id===fid)?.name||'';
+      return ` <span class="badge badge-green" style="font-size:9px" title="職種${multi?`（${Security.escapeHtml(fn)}）`:''}">${Security.escapeHtml(jn)}</span>`;
+    }).join('');
     const tr = document.createElement('tr');
     const bal = Leave.calcBalance(e);
     let grantCell='<span style="color:var(--text-muted)">-</span>', remainCell='<span style="color:var(--text-muted)">-</span>';
@@ -2636,7 +3395,7 @@ function renderEmployeeTable() {
       : `<button class="btn btn-outline btn-sm" onclick="openEditEmployeeModal('${Security.escapeHtml(e.id)}')">編集</button> <button class="btn btn-outline btn-sm" onclick="openLeaveProfileModal('${Security.escapeHtml(e.id)}')">年休設定</button> <button class="btn btn-outline btn-sm" onclick="deleteEmployee('${Security.escapeHtml(e.id)}')">削除</button>`;
     tr.innerHTML = `<td style="font-family:'DM Mono',monospace;font-size:12px">${Security.escapeHtml(e.id)}</td>
       <td style="font-weight:500">${nameCell}</td>
-      <td>${fac?Security.escapeHtml(fac.name):'<span style="color:var(--text-muted)">未設定</span>'}${concurrentBadges}</td>
+      <td>${fac?Security.escapeHtml(fac.name):'<span style="color:var(--text-muted)">未設定</span>'}${concurrentBadges}${jobBadges}</td>
       <td><span class="badge badge-gray">${Security.escapeHtml(e.role||'')}</span></td>
       <td style="font-size:12px">${e.hireDate?Security.escapeHtml(e.hireDate):'<span style="color:var(--text-muted)">未設定</span>'}</td>
       <td style="font-size:12px">週${e.weeklyDays||5}日</td>
@@ -2706,6 +3465,7 @@ function openAddEmployeeModal() {
     if(err) err.style.display='none';
     updateFacilityDropdowns();
     renderConcurrentFacilitiesCheckboxes('new-emp-concurrent-facilities', document.getElementById('new-emp-facility').value, []);
+    renderJobItemSelects('new', {}); // ver.7.7.0 No.7
     openModal('modal-add-employee');
   } catch(err) {
     Security.log('EMP_MODAL_OPEN_ERR', err.message, 'ERROR');
@@ -2741,8 +3501,11 @@ async function saveEmployee() {
   showLoading('保存中...');
   try {
     const nowIso=new Date().toISOString();
-    await DB.post('employees', {id, name, facility_id:facilityId, role, pw_hash:pwHash, hire_date:hireDate, leave_override_days:leaveOverride, weekly_work_days:weeklyDays, updated_at:nowIso});
-    AppState.employees.push({id,name,facilityId,role,pwHash,hireDate,leaveOverrideDays:leaveOverride,weeklyDays,updatedAt:nowIso});
+    const jobItems=collectJobItems('new'); // ver.7.7.0 No.7
+    const jobSaved = await sendEmployeeWithJobItems(p=>DB.post('employees', p),
+      {id, name, facility_id:facilityId, role, pw_hash:pwHash, hire_date:hireDate, leave_override_days:leaveOverride, weekly_work_days:weeklyDays, updated_at:nowIso, job_items:jobItems});
+    if(!jobSaved && Object.keys(jobItems).length) showNotif(JOB_ITEMS_COLUMN_MSG,'error');
+    AppState.employees.push({id,name,facilityId,role,pwHash,hireDate,leaveOverrideDays:leaveOverride,weeklyDays,updatedAt:nowIso,jobItems:jobSaved?jobItems:{}});
     Security.log('EMP_ADD',id);
     // 複数施設兼務対応: 選択された兼務施設をemployee_facilitiesに保存する（主所属と重複するIDは除外）
     const concurrentIds = collectConcurrentFacilities('new-emp-concurrent-facilities').filter(fid=>fid && fid!==facilityId);
@@ -2777,6 +3540,7 @@ function openEditEmployeeModal(id) {
     updateFacilityDropdowns();
     document.getElementById('edit-emp-facility').value=e.facilityId||'';
     renderConcurrentFacilitiesCheckboxes('edit-emp-concurrent-facilities', e.facilityId||'', AppState.employeeFacilities[e.id]||[]);
+    renderJobItemSelects('edit', e.jobItems||{}); // ver.7.7.0 No.7
     openModal('modal-edit-employee');
   } catch(err) {
     Security.log('EMP_EDIT_OPEN_ERR', err.message, 'ERROR');
@@ -2798,7 +3562,8 @@ async function saveEmployeeEdit() {
   const err=document.getElementById('emp-edit-error');
   if(!name){err.textContent='氏名は必須です';err.style.display='block';return;}
   const nowIso=new Date().toISOString();
-  const payload={name, facility_id:facilityId, role, hire_date:hireDate, leave_override_days:leaveOverride, weekly_work_days:weeklyDays, updated_at:nowIso};
+  const jobItems=collectJobItems('edit'); // ver.7.7.0 No.7
+  const payload={name, facility_id:facilityId, role, hire_date:hireDate, leave_override_days:leaveOverride, weekly_work_days:weeklyDays, updated_at:nowIso, job_items:jobItems};
   if(pw){
     if(!Auth.checkPw(pw)){err.textContent='パスワードは6文字以上で入力してください';err.style.display='block';return;}
     if(pw!==pw2){err.textContent='パスワードが一致しません';err.style.display='block';return;}
@@ -2806,9 +3571,10 @@ async function saveEmployeeEdit() {
   }
   showLoading('保存中...');
   try {
-    await DB.patch('employees', payload, `?id=eq.${encodeURIComponent(id)}`);
+    const jobSaved = await sendEmployeeWithJobItems(p=>DB.patch('employees', p, `?id=eq.${encodeURIComponent(id)}`), payload);
+    if(!jobSaved) showNotif(JOB_ITEMS_COLUMN_MSG,'error');
     const e=AppState.employees.find(x=>x.id===id);
-    if(e){ Object.assign(e,{name,facilityId,role,hireDate,leaveOverrideDays:leaveOverride,weeklyDays,updatedAt:nowIso}); if(payload.pw_hash) e.pwHash=payload.pw_hash; }
+    if(e){ Object.assign(e,{name,facilityId,role,hireDate,leaveOverrideDays:leaveOverride,weeklyDays,updatedAt:nowIso}); if(jobSaved) e.jobItems=jobItems; if(payload.pw_hash) e.pwHash=payload.pw_hash; }
     Security.log('EMP_EDIT',id);
     // 複数施設兼務対応: 選択された兼務施設をemployee_facilitiesに保存する（主所属と重複するIDは除外）
     const concurrentIds = collectConcurrentFacilities('edit-emp-concurrent-facilities').filter(fid=>fid && fid!==facilityId);
@@ -3019,7 +3785,8 @@ function handleImportFile(input) {
 // インポートの「フィールド名」入力欄と、実際のDBカラム名の対応表
 const IMPORT_FIELD_MAP = {
   '従業員番号':'id', '氏名':'name', '所属施設':'facility_id', '役職':'role',
-  '入社日':'hire_date', '週所定労働日数':'weekly_work_days', '年休付与日数':'leave_override_days'
+  '入社日':'hire_date', '週所定労働日数':'weekly_work_days', '年休付与日数':'leave_override_days',
+  '職種':'job_item' // ver.7.7.0 No.7: 所属施設（主）の個別項目名と一致させる
 };
 
 // Excelのシリアル日付・Dateオブジェクト・文字列日付をYYYY-MM-DDに正規化
@@ -3050,6 +3817,7 @@ async function executeImport() {
   let added=0, updated=0, skipped=0;
   const toInsert=[], toUpdate=[];
   const unmatchedFacilityNames=new Set(); // #3 修正: 施設名がマスタと一致しなかった行を記録
+  const unmatchedJobNames=new Set(); // ver.7.7.0 No.7: 個別項目名と一致しなかった職種
 
   data.forEach(row=>{
     if(!row || row.every(c=>c==null||c==='')) return; // 完全な空行は無視
@@ -3070,11 +3838,20 @@ async function executeImport() {
           else unmatchedFacilityNames.add(nameStr);
         }
       }
+      else if(col==='job_item') dbObj._jobName=Security.sanitizeStr(String(raw||''),50).trim();
       else dbObj[col]=Security.sanitizeStr(String(raw||''),col==='id'?20:50);
     });
     const eid=dbObj.id, en=dbObj.name;
     if(!eid||!en){skipped++;return;}
     const existing=AppState.employees.find(e=>e.id===eid);
+    // ver.7.7.0 No.7: 職種名を主所属施設の個別項目IDに変換して job_items に入れる
+    const jobName=dbObj._jobName; delete dbObj._jobName;
+    if(jobName){
+      const jfid=dbObj.facility_id || existing?.facilityId || AppState.facilities[0]?.id || '';
+      const act=getFacilityJobItems(jfid).find(a=>a.name.trim()===jobName);
+      if(act) dbObj.job_items={...(existing?.jobItems||{}), [jfid]:act.id};
+      else unmatchedJobNames.add(jobName);
+    }
     if(existing){
       if(!overwrite){skipped++;return;}
       const patch={...dbObj, updated_at:nowIso};
@@ -3086,26 +3863,31 @@ async function executeImport() {
         id:eid, name:en, facility_id:fid, role:dbObj.role||'',
         pw_hash:Auth.hashPw(eid+'0000'),
         hire_date:dbObj.hire_date||null, weekly_work_days:dbObj.weekly_work_days||5,
-        leave_override_days:dbObj.leave_override_days??null, updated_at:nowIso
+        leave_override_days:dbObj.leave_override_days??null, updated_at:nowIso,
+        ...(dbObj.job_items?{job_items:dbObj.job_items}:{})
       });
     }
   });
 
   if(!toInsert.length && !toUpdate.length){showNotif(`インポート完了: 0件追加、0件更新、${skipped}件スキップ`);closeModal('modal-import');return;}
   showLoading('インポート中...');
+  let jobColumnMissing=false;
   try {
     for(const emp of toInsert){
       try{
-        await DB.post('employees', emp);
-        AppState.employees.push({id:emp.id,name:emp.name,facilityId:emp.facility_id,role:emp.role,pwHash:emp.pw_hash,hireDate:emp.hire_date,weeklyDays:emp.weekly_work_days,leaveOverrideDays:emp.leave_override_days,updatedAt:emp.updated_at});
+        const jobOk = await sendEmployeeWithJobItems(p=>DB.post('employees', p), emp);
+        if(!jobOk) jobColumnMissing=true;
+        AppState.employees.push({id:emp.id,name:emp.name,facilityId:emp.facility_id,role:emp.role,pwHash:emp.pw_hash,hireDate:emp.hire_date,weeklyDays:emp.weekly_work_days,leaveOverrideDays:emp.leave_override_days,updatedAt:emp.updated_at,jobItems:jobOk?(emp.job_items||{}):{}});
         added++;
       } catch(e){ skipped++; }
     }
     for(const u of toUpdate){
       try{
-        await DB.patch('employees', u.patch, `?id=eq.${encodeURIComponent(u.id)}`);
+        const jobOk = await sendEmployeeWithJobItems(p=>DB.patch('employees', p, `?id=eq.${encodeURIComponent(u.id)}`), u.patch);
+        if(!jobOk) jobColumnMissing=true;
         const e=AppState.employees.find(x=>x.id===u.id);
         if(e){
+          if(jobOk && u.patch.job_items) e.jobItems=u.patch.job_items;
           if(u.patch.name!=null) e.name=u.patch.name;
           if('facility_id' in u.patch) e.facilityId=u.patch.facility_id;
           if(u.patch.role!=null) e.role=u.patch.role;
@@ -3123,6 +3905,8 @@ async function executeImport() {
     let msg=`インポート完了: ${added}件追加、${updated}件更新、${skipped}件スキップ`;
     if(unknownFields.length) msg+=`（未対応フィールド名: ${unknownFields.join('、')}）`;
     if(unmatchedFacilityNames.size) msg+=`（施設名が一致せず所属施設が未設定/既定値になった行があります: ${[...unmatchedFacilityNames].join('、')}）`;
+    if(unmatchedJobNames.size) msg+=`（個別項目に無い職種名のため職種を設定しなかった行があります: ${[...unmatchedJobNames].join('、')}）`;
+    if(jobColumnMissing) msg+='（職種を保存する列がDBに未追加のため、職種は保存されていません）';
     showNotif(msg,'success');
   } finally { hideLoading(); }
 }
@@ -3155,6 +3939,546 @@ function getVisibleEmployeesForFacility(facilityId, ym) {
 function getRequestFor(empId, date) { return AppState.staffRequests.find(r=>r.empId===empId&&r.date===date); }
 
 /* ================================================================
+   ver.8.0.0 No.13/14: シフトの公開状態
+   申請（スタッフ）→ 仮確定（管理者のみ見える調整段階）→ 一斉確定（スタッフに公開）
+   公開後の修正は「確定解除」→ 修正 →「再確定」。解除中もスタッフには元の確定内容を「調整中」として見せる。
+   ※ これまでの「確定するたびにスタッフ画面へ反映（＝通知）」を、一斉確定の1回にまとめるための仕組み
+================================================================ */
+const PUBLISH_STATUSES = ['draft','published','reopened'];
+function normalizePublishStatus(v) { return PUBLISH_STATUSES.includes(v) ? v : 'published'; }
+function parsePublishSnapshot(v) {
+  let o=v;
+  if(typeof o==='string'){ try { o=JSON.parse(o); } catch(_) { o=null; } }
+  if(!o || typeof o!=='object' || Array.isArray(o)) return null;
+  const t=x=>(typeof x==='string' && /^\d{2}:\d{2}$/.test(x)) ? x : null;
+  return { start:t(o.start)||'09:00', end:t(o.end)||'17:00', isAnnual:!!o.isAnnual, isOffDuty:!!o.isOffDuty,
+    breakMinutes: Number.isFinite(o.breakMinutes) ? o.breakMinutes : null, breakStart:t(o.breakStart), breakEnd:t(o.breakEnd) };
+}
+function snapshotOfShift(sh) {
+  return { start:sh.start, end:sh.end, isAnnual:!!sh.isAnnual, isOffDuty:!!sh.isOffDuty,
+    breakMinutes: sh.breakMinutes!=null ? sh.breakMinutes : null, breakStart: sh.breakStart||null, breakEnd: sh.breakEnd||null };
+}
+function shiftContentDiffers(sh, snap) {
+  if(!snap) return false;
+  return sh.start!==snap.start || sh.end!==snap.end || !!sh.isAnnual!==!!snap.isAnnual || !!sh.isOffDuty!==!!snap.isOffDuty
+    || (sh.breakMinutes??null)!==(snap.breakMinutes??null);
+}
+// スタッフに見せるシフト（仮確定は非表示、確定解除中は元の確定内容に「調整中」を付ける）
+function staffViewOfShift(sh) {
+  if(!sh) return null;
+  if(sh.publishStatus==='draft') return null;
+  if(sh.publishStatus==='reopened'){
+    if(!sh.publishedSnapshot) return {...sh, adjusting:true};
+    return {...sh, ...sh.publishedSnapshot, adjusting:true};
+  }
+  return sh;
+}
+const PUB_LABEL = { draft:'仮確定', published:'確定', reopened:'確定解除中' };
+function pubMarkHtml(sh) {
+  if(!sh || sh.publishStatus==='published') return '';
+  return sh.publishStatus==='draft'
+    ? '<span class="pub-mark draft" title="仮確定（スタッフには未公開）">仮</span>'
+    : '<span class="pub-mark reopened" title="確定解除中（スタッフには元の確定内容を「調整中」と表示）">解除中</span>';
+}
+function wrapPubCell(sh, cellHtml) {
+  if(!sh || sh.publishStatus==='published') return cellHtml;
+  return `<div class="pub-wrap pub-${sh.publishStatus}">${pubMarkHtml(sh)}${cellHtml}</div>`;
+}
+function isPublishColumnErr(err) { return /publish_status|published_at|published_snapshot|republished_at/i.test(err?.message||''); }
+const PUBLISH_COLUMN_MSG = '仮確定・一斉確定に必要な列がDBに未追加です。SupabaseでshiftsテーブルのSQL（ver.8.0.0）を実行してください';
+
+/* ver.7.8.0 No.11: 空き番の表示。「空」を○で囲んだマーク＋申請していた時間（代わりの人を探しやすくする） */
+const KARA_MARK = '<span class="kara-mark">空</span>';
+function offDutyReqTime(req) {
+  return (req && !req.isAnnual && req.start && req.end && req.start<req.end) ? `${Security.escapeHtml(req.start)}-${Security.escapeHtml(req.end)}` : '';
+}
+function offDutyCellHtml(req) {
+  const t=offDutyReqTime(req);
+  return `<span class="month-cell-offduty" title="空き番（申請していた時間${t?': '+t:'なし'}）">${KARA_MARK}${t||'空き番'}</span>`;
+}
+
+/* ================================================================
+   ver.7.7.0 No.7: 職種（設定マスタ「個別項目管理」の項目を流用）
+   - 従業員ごと・所属施設ごとに項目を1つ選ぶ（employees.job_items = {施設ID: 個別項目ID}）
+   - シフト管理表では職種ごとに見出し行で分け、並び順は「個別項目管理の並び → 未設定 → 他施設ヘルプ」
+================================================================ */
+function parseJobItems(v) {
+  let o=v;
+  if(typeof o==='string'){ try { o=JSON.parse(o); } catch(_) { o={}; } }
+  if(!o || typeof o!=='object' || Array.isArray(o)) return {};
+  const out={};
+  Object.keys(o).slice(0,50).forEach(k=>{ if(typeof o[k]==='string' && o[k]) out[Security.sanitizeStr(k,64)]=Security.sanitizeStr(o[k],64); });
+  return out;
+}
+function getFacilityJobItems(fid) { return AppState.facilityActivities.filter(a=>a.facilityId===fid && !a.deleted); }
+function getEmpJobId(emp, fid) {
+  const id = emp?.jobItems?.[fid];
+  return id && AppState.facilityActivities.some(a=>a.id===id && a.facilityId===fid && !a.deleted) ? id : null;
+}
+function getEmpJobName(emp, fid) { const id=getEmpJobId(emp, fid); return id ? (AppState.facilityActivities.find(a=>a.id===id)?.name||'') : ''; }
+function setAdminJobFilter(value) {
+  AppState.adminJobFilter = Security.sanitizeStr(String(value||'all'), 64) || 'all';
+  Security.log('JOB_FILTER', AppState.adminJobFilter);
+  renderShiftView();
+}
+function setAdminJobGroup(on) {
+  AppState.adminJobGroup = !!on;
+  renderShiftView();
+}
+function syncJobControls(facilityId) {
+  const acts=getFacilityJobItems(facilityId);
+  const wrap=document.getElementById('shift-job-controls');
+  if(wrap) wrap.style.display = acts.length ? '' : 'none';
+  const sel=document.getElementById('shift-job-filter');
+  if(sel){
+    const valid=new Set(['all','none',...acts.map(a=>a.id)]);
+    if(!valid.has(AppState.adminJobFilter)) AppState.adminJobFilter='all';
+    sel.innerHTML = `<option value="all">すべて</option>`
+      + acts.map(a=>`<option value="${Security.escapeHtml(a.id)}">${Security.escapeHtml(a.name)}</option>`).join('')
+      + `<option value="none">未設定</option>`;
+    sel.value = AppState.adminJobFilter;
+  }
+  const cb=document.getElementById('shift-job-group');
+  if(cb) cb.checked = AppState.adminJobGroup!==false;
+}
+// 職種の見出し行（直前の行と職種が変わったところに入れる）
+function jobGroupHeaderHtml(emps, ix, colspan) {
+  if(!emps._grouped) return '';
+  const cur=emps[ix];
+  if(ix>0 && emps[ix-1]._jobKey===cur._jobKey) return '';
+  const cnt=emps.filter(e=>e._jobKey===cur._jobKey).length;
+  return `<tr class="job-group-row"><td colspan="${colspan}"><span class="job-group-label">${Security.escapeHtml(cur._jobLabel)}<span class="job-group-count">${cnt}名</span></span></td></tr>`;
+}
+
+/* ver.7.5.3 No.5 / No.6: シフト管理表の表示切替と並び順
+   - 対象期間は表示中の日付（月表示=その月、週表示=その週、日表示=その日）
+   - 勤務者のみ: 期間内に確定シフト（空き番・年休を除く）がある従業員
+   - 申請者のみ: 期間内にこの施設へのシフト希望（年休希望を含む）を出している従業員
+   - 並び順: 登録済み従業員 → 一時ヘルプの順を維持し、その中で「申請あり」を上に、次に氏名順 */
+const ADMIN_EMP_FILTERS = { all:'全員', working:'勤務者のみ', requested:'申請者のみ' };
+function setAdminEmpFilter(value) {
+  AppState.adminEmpFilter = Object.prototype.hasOwnProperty.call(ADMIN_EMP_FILTERS, value) ? value : 'all';
+  Security.log('EMP_FILTER', AppState.adminEmpFilter);
+  renderShiftView();
+}
+function filterSortAdminEmps(emps, facilityId, ym, dateStrs) {
+  const dateSet = new Set(dateStrs);
+  const shifts = getShiftsFor(facilityId, ym);
+  const working = new Set(shifts.filter(s=>dateSet.has(s.date) && !s.isOffDuty && !s.isAnnual).map(s=>s.empId));
+  const requested = new Set(AppState.staffRequests
+    .filter(r=>dateSet.has(r.date) && (!r.facilityId || r.facilityId===facilityId))
+    .map(r=>r.empId));
+  const mode = AppState.adminEmpFilter || 'all';
+  let list = emps;
+  if(mode==='working') list = emps.filter(e=>working.has(e.id));
+  else if(mode==='requested') list = emps.filter(e=>requested.has(e.id));
+  // ver.7.7.0 No.7: 職種で絞り込み・分けて並べる
+  syncJobControls(facilityId);
+  const acts = getFacilityJobItems(facilityId);
+  const jobOrder = new Map(acts.map((a,i)=>[a.id,i]));
+  const jobOf = e => e.isHelper ? null : getEmpJobId(e, facilityId);
+  const jf = AppState.adminJobFilter || 'all';
+  if(jf==='none') list = list.filter(e=>!e.isHelper && !jobOf(e));
+  else if(jf!=='all') list = list.filter(e=>jobOf(e)===jf);
+  const grouping = AppState.adminJobGroup!==false && acts.length>0 && list.some(e=>jobOf(e));
+  const rank = e => e.isHelper ? 1e6+1 : (jobOf(e) ? jobOrder.get(jobOf(e)) : 1e6);
+  list = [...list].sort((a,b)=>{
+    if(a.isHelper!==b.isHelper) return a.isHelper?1:-1;
+    if(grouping){ const d=rank(a)-rank(b); if(d) return d; }
+    const ra=requested.has(a.id), rb=requested.has(b.id);
+    if(ra!==rb) return ra?-1:1;
+    return (a.name||'').localeCompare(b.name||'','ja');
+  });
+  list.forEach(e=>{
+    const jid=jobOf(e);
+    e._jobKey = e.isHelper ? '__helper' : (jid||'__none');
+    e._jobLabel = e.isHelper ? '他施設（一時ヘルプ）' : (jid ? (acts.find(a=>a.id===jid)?.name||'') : '職種未設定');
+  });
+  list._grouped = grouping;
+  const countEl = document.getElementById('shift-emp-count');
+  if(countEl) countEl.textContent = (mode==='all' && jf==='all') ? `${list.length}名` : `${list.length} / ${emps.length}名`;
+  const sel = document.getElementById('shift-emp-filter');
+  if(sel && sel.value!==mode) sel.value = mode;
+  return list;
+}
+function emptyEmpRowHtml(colspan) {
+  const mode = AppState.adminEmpFilter || 'all';
+  const jf = AppState.adminJobFilter || 'all';
+  const msg = (mode==='all' && jf==='all') ? 'この施設に従業員がいません'
+    : (jf==='all' ? `「${ADMIN_EMP_FILTERS[mode]}」に該当する従業員はいません` : '表示条件に該当する従業員はいません');
+  return `<tr><td colspan="${colspan}" style="padding:40px;text-align:center;color:var(--text-muted)">${msg}</td></tr>`;
+}
+
+/* ================================================================
+   ver.7.8.0 No.9: シフト表の印刷・PDF出力（A3横）
+   - 半月単位（1〜15日／16日〜月末）と1日単位（30分刻みのタイムライン）
+   - 専用の印刷用レイアウトを作り、ブラウザの印刷（PDFに保存）で出力する
+     （日本語フォントをそのまま使えるため文字化けしない。外部ライブラリ不要）
+================================================================ */
+function openPrintModal() {
+  if(!Auth.requireAdmin()) return;
+  const ym=document.getElementById('shift-month').value;
+  if(!ym || !AppState.currentFacilityId){ showNotif('施設と年月を選択してください','error'); return; }
+  const half = (AppState.shiftPeriod==='first'||AppState.shiftPeriod==='second') ? AppState.shiftPeriod : 'first';
+  document.getElementById('print-half').value = half;
+  const days=getMonthDays(ym).map(fmtDate);
+  const dateEl=document.getElementById('print-date');
+  dateEl.min=days[0]; dateEl.max=days[days.length-1];
+  dateEl.value = (AppState.currentDayDate && AppState.currentDayDate.startsWith(ym)) ? AppState.currentDayDate : days[0];
+  const unit = AppState.currentShiftView==='day' ? 'day' : 'half';
+  document.querySelectorAll('input[name="print-unit"]').forEach(r=>{ r.checked = r.value===unit; });
+  document.getElementById('print-include-req').checked = false;
+  syncPrintModal();
+  openModal('modal-print');
+}
+function syncPrintModal() {
+  const unit=document.querySelector('input[name="print-unit"]:checked')?.value||'half';
+  document.getElementById('print-half-row').style.display = unit==='half' ? '' : 'none';
+  document.getElementById('print-day-row').style.display = unit==='day' ? '' : 'none';
+  // ver.7.8.1: 掲示用は確定シフトだけを印刷する（空き番・年休・未確定の希望・集計は載せない）
+  const post = document.querySelector('input[name="print-mode"]:checked')?.value==='post';
+  document.getElementById('print-req-row').style.display = post ? 'none' : '';
+  const note=document.getElementById('print-mode-note');
+  if(note) note.textContent = post
+    ? '確定した勤務と休憩だけを載せます（空き番・年休・未確定の希望・個人の集計は載せません）。確定シフトが無い人は載りません。'
+    : '空き番・年休・個人の集計（出勤日数・実働時間）も載せます。';
+}
+function printDayClass(d) {
+  const k=getDayKind(d);
+  return (k==='hol'||k==='sun') ? 'p-hol' : (k==='sat' ? 'p-sat' : '');
+}
+function printHeadHtml(title, sub) {
+  const fac=AppState.facilities.find(f=>f.id===AppState.currentFacilityId);
+  return `<div class="p-head"><div><div class="p-title">${Security.escapeHtml(title)}</div>`
+    + `<div class="p-sub">${Security.escapeHtml(fac?.name||'')}${sub?`　${Security.escapeHtml(sub)}`:''}</div></div>`
+    + `<div class="p-sub">出力日時: ${Security.escapeHtml(new Date().toLocaleString('ja-JP'))}</div></div>`;
+}
+function printFootHtml() {
+  return `<div class="p-foot">シフト管理システム ver.${Security.escapeHtml(APP_VERSION)}</div>`;
+}
+function printLegendHtml(includeReq, post) {
+  if(post) return `<div class="p-legend"><span><span class="p-shift" style="display:inline-block;padding:0 6px">09:00-17:00</span> 勤務時間（休＝休憩）</span>`
+    + `<span><span class="p-closed" style="display:inline-block;width:18px;height:10px;border:1px solid #9ca3af"></span> 定休日</span></div>`;
+  return `<div class="p-legend"><span><span class="p-shift" style="display:inline-block;padding:0 6px">09:00-17:00</span> 確定</span>`
+    + `<span><span class="p-changed" style="display:inline-block;padding:0 6px">✎</span> 希望と違う時間で確定</span>`
+    + `<span><span class="p-annual" style="display:inline-block;padding:0 6px">年休</span></span>`
+    + `<span>仮＝仮確定（スタッフ未公開）</span>`
+    + `<span><span class="p-off" style="display:inline-block;padding:0 6px">(空)</span> 空き番（申請していた時間）</span>`
+    + (includeReq?`<span><span class="p-req" style="display:inline-block;padding:0 6px">希望</span> 未確定の希望</span>`:'')
+    + `<span><span class="p-closed" style="display:inline-block;width:18px;height:10px;border:1px solid #9ca3af"></span> 定休日</span></div>`;
+}
+function printGroupRowHtml(emps, ix, colspan) {
+  if(!emps._grouped) return '';
+  const cur=emps[ix];
+  if(ix>0 && emps[ix-1]._jobKey===cur._jobKey) return '';
+  const cnt=emps.filter(e=>e._jobKey===cur._jobKey).length;
+  return `<tr class="p-group"><td colspan="${colspan}">${Security.escapeHtml(cur._jobLabel)}（${cnt}名）</td></tr>`;
+}
+
+// 半月単位
+function buildPrintHalfHtml(fid, ym, period, includeReq, post) {
+  if(post) includeReq=false;
+  const days=getPeriodDays(ym, period);
+  const dateStrs=days.map(fmtDate);
+  let emps=filterSortAdminEmps(getVisibleEmployeesForFacility(fid, ym), fid, ym, dateStrs);
+  // ver.8.0.0: 掲示用はスタッフに公開済みの内容だけ（仮確定は載せない・確定解除中は元の確定内容）
+  const shifts = post ? getShiftsFor(fid, ym).map(staffViewOfShift).filter(Boolean) : getShiftsFor(fid, ym);
+  if(post){ // ver.7.8.1: 掲示用は期間内に確定した勤務がある人だけ
+    const g=emps._grouped, dset=new Set(dateStrs);
+    emps=emps.filter(e=>shifts.some(x=>x.empId===e.id && dset.has(x.date) && !x.isOffDuty && !x.isAnnual));
+    emps._grouped=g;
+  }
+  const m=parseInt(ym.slice(5,7),10), y=ym.slice(0,4);
+  const label=`${y}年${m}月${period==='first'?'前半':'後半'}（${m}/${days[0].getDate()}〜${m}/${days[days.length-1].getDate()}）`;
+  const nameW=34, totW=13;
+  let h=printHeadHtml(`${post?'確定シフト表':'シフト表'}　${label}`, '');
+  h+=`<table><colgroup><col style="width:${nameW}mm">${days.map(()=>'<col>').join('')}${post?'':`<col style="width:${totW}mm"><col style="width:${totW+3}mm">`}</colgroup>`;
+  h+='<thead><tr><th>氏名</th>';
+  days.forEach(d=>{
+    const k=printDayClass(d), hol=JpHoliday.name(d), closed=isFacilityClosedDay(fid,d);
+    h+=`<th class="${k?k+'-bg':''}${closed?' p-closed':''}">${d.getDate()}<br><span class="${k}">${getDow(d)}</span>`
+      + (hol?`<span class="p-holname">${Security.escapeHtml(hol)}</span>`:'') + (closed?'<span class="p-closedname">定休</span>':'') + '</th>';
+  });
+  h+=(post?'':'<th>出勤日数</th><th>実働時間</th>')+'</tr></thead><tbody>';
+  const colspan=days.length+(post?1:3);
+  const dayCount=dateStrs.map(()=>0);
+  emps.forEach((emp,ix)=>{
+    h+=printGroupRowHtml(emps, ix, colspan);
+    let workDays=0, netMin=0;
+    h+=`<tr><td class="p-name">${Security.escapeHtml(emp.name)}${emp.isHelper?'（他施設）':''}</td>`;
+    days.forEach((d,di)=>{
+      const ds=dateStrs[di];
+      const shift=shifts.find(s=>s.empId===emp.id && s.date===ds);
+      const req=getRequestFor(emp.id, ds);
+      const k=printDayClass(d), closed=isFacilityClosedDay(fid,d);
+      let cell='';
+      if(shift){
+        if(shift.isOffDuty){ if(!post){ const t=offDutyReqTime(req); cell=`<span class="p-off">(空)${t?'<br>'+t:''}</span>`; } }
+        else if(shift.isAnnual){ if(!post) cell='<span class="p-annual">年休</span>'; }
+        else {
+          const changed=!post && req && !req.isAnnual && req.start && req.end && (req.start!==shift.start || req.end!==shift.end);
+          const brk=shift.breakMinutes ? `<span class="p-break">休${shift.breakMinutes}分</span>` : '';
+          const draftMark = (!post && shift.publishStatus==='draft') ? '仮 ' : ((!post && shift.publishStatus==='reopened') ? '解除中 ' : ''); // ver.8.0.0
+          cell=`<span class="${changed?'p-changed':'p-shift'}">${draftMark}${Security.escapeHtml(shift.start)}<br>${Security.escapeHtml(shift.end)}${changed?' ✎':''}</span>${brk}`;
+          workDays++; dayCount[di]++;
+          netMin+=Math.max(0, calcWorkMinutes(shift.start, shift.end)-(shift.breakMinutes||0));
+        }
+      } else if(includeReq && req && req.status==='pending' && (!req.facilityId || req.facilityId===fid)){
+        cell = req.isAnnual ? '<span class="p-req">年休希望</span>' : `<span class="p-req">希望<br>${Security.escapeHtml(req.start)}-${Security.escapeHtml(req.end)}</span>`;
+      }
+      h+=`<td class="${k?k+'-bg':''}${closed?' p-closed':''}">${cell}</td>`;
+    });
+    h+=(post?'':`<td>${workDays}日</td><td>${fmtHm(netMin)}</td>`)+'</tr>';
+  });
+  if(!emps.length) h+=`<tr><td colspan="${colspan}" style="padding:20px">表示条件に該当する従業員はいません</td></tr>`;
+  h+=`<tr class="p-total"><td class="p-name">出勤人数</td>${dayCount.map(c=>`<td>${c}名</td>`).join('')}${post?'':'<td colspan="2"></td>'}</tr>`;
+  h+='</tbody></table>'+printLegendHtml(includeReq, post)+printFootHtml();
+  return { html:h, title:`${post?'確定シフト表':'シフト表'}_${AppState.facilities.find(f=>f.id===fid)?.name||''}_${y}年${m}月${period==='first'?'前半':'後半'}` };
+}
+
+// 1日単位（30分刻みのタイムライン）
+function buildPrintDayHtml(fid, ym, dateStr, includeReq, post) {
+  if(post) includeReq=false;
+  const d=new Date(dateStr+'T00:00:00');
+  // ver.7.8.1: 掲示用は確定した勤務だけ（空き番・年休は載せない）
+  const shifts=getShiftsFor(fid, ym).map(x=>post?staffViewOfShift(x):x).filter(s=>s && s.date===dateStr && (!post || (!s.isOffDuty && !s.isAnnual))); // ver.8.0.0
+  const reqOk = r => r && (!r.facilityId || r.facilityId===fid);
+  let emps=filterSortAdminEmps(getVisibleEmployeesForFacility(fid, ym), fid, ym, [dateStr]);
+  // その日に登録（確定・年休・空き番、または未確定の希望）がある人だけを載せる
+  const grouped=emps._grouped;
+  emps=emps.filter(e=>shifts.some(s=>s.empId===e.id) || (includeReq && reqOk(getRequestFor(e.id,dateStr)) && getRequestFor(e.id,dateStr).status==='pending'));
+  emps._grouped=grouped;
+  // 表示する時間帯（登録内容から自動。なければ 8:00〜20:00）
+  const toMin=t=>{ const [hh,mm]=String(t||'0:0').split(':').map(Number); return hh*60+mm; };
+  let lo=24*60, hi=0;
+  emps.forEach(e=>{
+    const s=shifts.find(x=>x.empId===e.id), r=getRequestFor(e.id,dateStr);
+    const add=(a,b)=>{ if(a&&b&&a<b){ lo=Math.min(lo,toMin(a)); hi=Math.max(hi,toMin(b)); } };
+    if(s && !s.isOffDuty && !s.isAnnual) add(s.start,s.end);
+    if(r && !r.isAnnual && ((s && s.isOffDuty) || (includeReq && r.status==='pending'))) add(r.start,r.end);
+  });
+  if(lo>=hi){ lo=8*60; hi=20*60; }
+  const startH=Math.floor(lo/60), endH=Math.min(24, Math.ceil(hi/60));
+  const slots=[]; for(let t=startH*60; t<endH*60; t+=30) slots.push(t);
+  const ts=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')}`;
+  const hol=JpHoliday.name(d), closed=isFacilityClosedDay(fid,d);
+  const title=`${post?'確定シフト表':'シフト表'}　${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${getDow(d)}）${hol?'・'+hol:''}${closed?'・定休日':''}`;
+  let h=printHeadHtml(title, '');
+  h+=`<table><colgroup><col style="width:34mm"><col style="width:26mm"><col style="width:14mm">${slots.map(()=>'<col>').join('')}</colgroup>`;
+  h+='<thead><tr><th rowspan="2">氏名</th><th rowspan="2">勤務時間</th><th rowspan="2">休憩</th>';
+  for(let hh=startH; hh<endH; hh++) h+=`<th colspan="2" class="p-hr">${hh}:00</th>`;
+  h+='</tr><tr>'+slots.map(t=>`<th class="${t%60===0?'p-hr':''}" style="font-size:7pt;font-weight:400">${t%60===0?'00':'30'}</th>`).join('')+'</tr></thead><tbody>';
+  const colspan=slots.length+3;
+  const slotCount=slots.map(()=>0);
+  emps.forEach((emp,ix)=>{
+    h+=printGroupRowHtml(emps, ix, colspan);
+    const s=shifts.find(x=>x.empId===emp.id), r=getRequestFor(emp.id,dateStr);
+    let timeTxt='', brkTxt='', kind='';
+    if(s && s.isOffDuty){ kind='off'; timeTxt=`(空) ${offDutyReqTime(r)||'空き番'}`; }
+    else if(s && s.isAnnual){ kind='annual'; timeTxt='年休'; }
+    else if(s){ kind='shift'; timeTxt=`${(!post&&s.publishStatus==='draft')?'仮 ':''}${s.start}-${s.end}`; brkTxt=s.breakMinutes?`${s.breakMinutes}分`:'-'; }
+    else if(includeReq && r && r.status==='pending'){ kind='req'; timeTxt=r.isAnnual?'年休希望':`希望 ${r.start}-${r.end}`; }
+    h+=`<tr><td class="p-name">${Security.escapeHtml(emp.name)}${emp.isHelper?'（他施設）':''}</td><td>${Security.escapeHtml(timeTxt)}</td><td>${Security.escapeHtml(brkTxt)}</td>`;
+    if(kind==='annual'){ h+=`<td colspan="${slots.length}"><span class="p-annual">年休</span></td></tr>`; return; }
+    slots.forEach((t,si)=>{
+      const a=ts(t), b=ts(t+30);
+      let cls=t%60===0?'p-hr':'';
+      if(kind==='shift' && a>=s.start && a<s.end){
+        const inBreak=s.breakStart && s.breakEnd && a<s.breakEnd && b>s.breakStart;
+        cls+=inBreak?' p-bar-break':' p-bar';
+        if(!inBreak) slotCount[si]++;
+      } else if(kind==='off' && r && !r.isAnnual && a>=r.start && a<r.end) cls+=' p-bar-off';
+      else if(kind==='req' && r && !r.isAnnual && a>=r.start && a<r.end) cls+=' p-bar-req';
+      h+=`<td class="${cls}"></td>`;
+    });
+    h+='</tr>';
+  });
+  if(!emps.length) h+=`<tr><td colspan="${colspan}" style="padding:20px">この日の登録はありません</td></tr>`;
+  h+=`<tr class="p-total"><td class="p-name" colspan="3">勤務中の人数（休憩を除く）</td>${slotCount.map((c,si)=>`<td class="${slots[si]%60===0?'p-hr':''}">${c}</td>`).join('')}</tr>`;
+  h+='</tbody></table>'+printLegendHtml(includeReq, post)+printFootHtml();
+  const fname=AppState.facilities.find(f=>f.id===fid)?.name||'';
+  return { html:h, title:`${post?'確定シフト表':'シフト表'}_${fname}_${dateStr}` };
+}
+
+function printShiftSheet() {
+  if(!Auth.requireAdmin()) return;
+  const fid=AppState.currentFacilityId;
+  const ym=document.getElementById('shift-month').value;
+  if(!fid || !ym){ showNotif('施設と年月を選択してください','error'); return; }
+  const unit=document.querySelector('input[name="print-unit"]:checked')?.value==='day' ? 'day' : 'half';
+  const post=document.querySelector('input[name="print-mode"]:checked')?.value==='post'; // ver.7.8.1
+  const includeReq=!post && !!document.getElementById('print-include-req').checked;
+  let out;
+  if(unit==='day'){
+    const ds=Security.sanitizeStr(document.getElementById('print-date').value,10);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(ds) || !ds.startsWith(ym)){ showNotif(`日付は${ym}の中から選んでください`,'error'); return; }
+    out=buildPrintDayHtml(fid, ym, ds, includeReq, post);
+  } else {
+    const p=document.getElementById('print-half').value==='second' ? 'second' : 'first';
+    out=buildPrintHalfHtml(fid, ym, p, includeReq, post);
+  }
+  const area=document.getElementById('print-area');
+  area.innerHTML=out.html;
+  closeModal('modal-print');
+  renderShiftView(); // 絞り込み件数の表示を画面の状態に戻す
+  const prevTitle=document.title;
+  document.title=out.title.replace(/[\\/:*?"<>|]/g,'_'); // PDFの既定ファイル名になる
+  Security.log('PRINT', `${unit} ${post?'post':'admin'} ${fid} ${ym}`);
+  const cleanup=()=>{ document.title=prevTitle; area.innerHTML=''; window.removeEventListener('afterprint', cleanup); };
+  window.addEventListener('afterprint', cleanup);
+  setTimeout(()=>{ try { window.print(); } catch(e) { cleanup(); showNotif('印刷を開始できませんでした','error'); } }, 50);
+}
+
+/* ver.8.1.0 No.15〜17: 締め切り設定（管理者） */
+function defaultDeadlineAt(ym, period) {
+  const [y,m]=ym.split('-').map(Number);
+  const d = period==='second' ? new Date(y, m-1, 1, 23, 59) : new Date(y, m-2, 15, 23, 59); // 前半・1か月=前月15日、後半=当月1日
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T23:59`;
+}
+function toLocalInput(iso) {
+  const d=new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function openDeadlineModal() {
+  if(!Auth.requireAdmin()) return;
+  const fid=AppState.currentFacilityId;
+  if(!fid){ showNotif('施設を選択してください','error'); return; }
+  const f=AppState.facilities.find(x=>x.id===fid);
+  document.getElementById('dl-modal-title').textContent=`申請の締め切り設定 - ${f?.name||''}`;
+  resetDeadlineForm();
+  renderDeadlineTable();
+  openModal('modal-deadlines');
+}
+function resetDeadlineForm() {
+  const now=new Date();
+  const nx=new Date(now.getFullYear(), now.getMonth()+1, 1);
+  const ym=`${nx.getFullYear()}-${String(nx.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('dl-edit-id').value='';
+  document.getElementById('dl-ym').value=ym;
+  document.getElementById('dl-period').value='first';
+  AppState.dlLabelTouched=false;
+  AppState.dlReopen=[];
+  document.getElementById('dl-label').value=autoDeadlineLabel(ym,'first');
+  document.getElementById('dl-at').value=defaultDeadlineAt(ym,'first');
+  document.getElementById('dl-reopen-wrap').style.display='none';
+  document.getElementById('dl-cancel-edit').style.display='none';
+  document.getElementById('dl-save-btn').textContent='締め切りを追加';
+  document.getElementById('dl-error').textContent='';
+}
+// No.17: 対象月・区分を変えたら呼称（手で直していなければ）と締め切り日時の初期値を入れ直す
+function onDeadlineTargetChange() {
+  const ym=document.getElementById('dl-ym').value, p=document.getElementById('dl-period').value;
+  if(!ym) return;
+  if(!AppState.dlLabelTouched) document.getElementById('dl-label').value=autoDeadlineLabel(ym,p);
+  if(!document.getElementById('dl-edit-id').value) document.getElementById('dl-at').value=defaultDeadlineAt(ym,p);
+  renderReopenDates();
+}
+function renderReopenDates() {
+  const box=document.getElementById('dl-reopen-list');
+  box.innerHTML=(AppState.dlReopen||[]).map(d=>`<span>${Security.escapeHtml(fmtMdDow(d))}<button type="button" title="取り消す" onclick="removeDeadlineReopenDate('${Security.escapeHtml(d)}')">✕</button></span>`).join('')
+    || '<span style="background:none;border:none;color:var(--text-muted)">なし</span>';
+}
+function addDeadlineReopenDate() {
+  const v=document.getElementById('dl-reopen-date').value;
+  const ym=document.getElementById('dl-ym').value, p=document.getElementById('dl-period').value;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(v) || !deadlineCovers({ym, period:p}, v)){ document.getElementById('dl-error').textContent='追加募集の日は対象期間の中から選んでください'; return; }
+  document.getElementById('dl-error').textContent='';
+  AppState.dlReopen=[...new Set([...(AppState.dlReopen||[]), v])].sort();
+  renderReopenDates();
+}
+function removeDeadlineReopenDate(d) { AppState.dlReopen=(AppState.dlReopen||[]).filter(x=>x!==d); renderReopenDates(); }
+function editDeadline(id) {
+  const dl=getFacilityDeadlines(AppState.currentFacilityId).find(x=>x.id===id);
+  if(!dl) return;
+  document.getElementById('dl-edit-id').value=dl.id;
+  document.getElementById('dl-ym').value=dl.ym;
+  document.getElementById('dl-period').value=dl.period;
+  document.getElementById('dl-label').value=dl.label;
+  AppState.dlLabelTouched = dl.label!==autoDeadlineLabel(dl.ym, dl.period);
+  document.getElementById('dl-at').value=toLocalInput(dl.deadlineAt);
+  AppState.dlReopen=[...dl.reopenDates];
+  document.getElementById('dl-reopen-wrap').style.display='';
+  document.getElementById('dl-cancel-edit').style.display='';
+  document.getElementById('dl-save-btn').textContent='変更を保存';
+  document.getElementById('dl-error').textContent='';
+  renderReopenDates();
+}
+async function persistDeadlines(fid, list, okMsg) {
+  showLoading('保存中...');
+  try {
+    await DB.patch('facilities', {request_deadlines: serializeDeadlines(list)}, `?id=eq.${encodeURIComponent(fid)}`);
+    const f=AppState.facilities.find(x=>x.id===fid);
+    if(f) f.requestDeadlines=parseRequestDeadlines(serializeDeadlines(list));
+    renderDeadlineTable(); renderShiftView();
+    showNotif(okMsg,'success');
+    return true;
+  } catch(err) {
+    showNotif(/request_deadlines/i.test(err.message||'') ? '締め切りを保存する列がDBに未追加です。SupabaseでSQL（ver.8.1.0）を実行してください' : '締め切りの保存に失敗しました','error');
+    Security.log('DEADLINE_SAVE_ERR', err.message, 'ERROR');
+    return false;
+  } finally { hideLoading(); }
+}
+async function saveDeadline() {
+  if(!Auth.requireAdmin()) return;
+  const fid=AppState.currentFacilityId;
+  const err=document.getElementById('dl-error');
+  const id=document.getElementById('dl-edit-id').value;
+  const ym=document.getElementById('dl-ym').value;
+  const period=document.getElementById('dl-period').value;
+  const label=Security.sanitizeStr(document.getElementById('dl-label').value,40).trim() || autoDeadlineLabel(ym, period);
+  const atRaw=document.getElementById('dl-at').value;
+  const at=new Date(atRaw);
+  if(!/^\d{4}-\d{2}$/.test(ym) || !Object.prototype.hasOwnProperty.call(DL_PERIODS, period)){ err.textContent='対象月と区分を選んでください'; return; }
+  if(!atRaw || isNaN(at)){ err.textContent='締め切り日時を入力してください'; return; }
+  const list=getFacilityDeadlines(fid).filter(x=>x.id!==id);
+  const overlap=list.find(x=>x.ym===ym && (x.period==='full' || period==='full' || x.period===period));
+  if(overlap){ err.textContent=`「${overlap.label}」と対象期間が重なっています`; return; }
+  const reopen=(AppState.dlReopen||[]).filter(d=>deadlineCovers({ym, period}, d));
+  list.push({ id: id || ('dl'+Date.now()), ym, period, label, deadlineAt: at.toISOString(), reopenDates: id?reopen:[] });
+  while(list.length>60) list.sort((p,q)=>p.ym.localeCompare(q.ym)).shift(); // 古いものから整理（最大60件）
+  err.textContent='';
+  if(await persistDeadlines(fid, list, id?'締め切りを更新しました':'締め切りを追加しました')){
+    Security.log(id?'DEADLINE_EDIT':'DEADLINE_ADD', `${fid} ${ym} ${period} ${at.toISOString()} reopen:${reopen.join(',')}`);
+    resetDeadlineForm();
+  }
+}
+async function deleteDeadline(id) {
+  if(!Auth.requireAdmin()) return;
+  const fid=AppState.currentFacilityId;
+  const dl=getFacilityDeadlines(fid).find(x=>x.id===id);
+  if(!dl || !confirm(`「${dl.label}」の締め切りを削除しますか？（削除するとその期間は締め切りなしになります）`)) return;
+  if(await persistDeadlines(fid, getFacilityDeadlines(fid).filter(x=>x.id!==id), '締め切りを削除しました')) Security.log('DEADLINE_DEL', `${fid} ${dl.ym} ${dl.period}`, 'WARN');
+}
+function renderDeadlineTable() {
+  const tb=document.getElementById('dl-tbody');
+  if(!tb) return;
+  const list=[...getFacilityDeadlines(AppState.currentFacilityId)].sort((p,q)=>q.ym.localeCompare(p.ym) || p.period.localeCompare(q.period));
+  if(!list.length){ tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px">締め切りは未設定です</td></tr>'; return; }
+  tb.innerHTML=list.map(x=>{
+    const st=deadlineState(x);
+    const stTxt = st==='closed' ? '締め切り済み' : (st==='soon'?'まもなく締め切り':'受付中');
+    const reTxt = (st==='closed' && x.reopenDates.length) ? `<div style="font-size:11px;color:#065f46;margin-top:3px">追加募集: ${x.reopenDates.map(fmtMdDow).map(Security.escapeHtml).join('、')}</div>` : '';
+    const m=parseInt(x.ym.slice(5,7),10);
+    return `<tr><td style="font-weight:600">${Security.escapeHtml(x.label)}</td><td>${x.ym.slice(0,4)}/${m} ${DL_PERIODS[x.period]}</td>`
+      + `<td>${Security.escapeHtml(fmtDeadline(x.deadlineAt))}</td><td><span class="dl-chip ${st}">${stTxt}</span>${reTxt}</td>`
+      + `<td><button class="btn btn-outline btn-sm" onclick="editDeadline('${Security.escapeHtml(x.id)}')" title="締め切り日時・呼称の変更、追加募集の日の設定">編集</button> <button class="btn btn-outline btn-sm" onclick="deleteDeadline('${Security.escapeHtml(x.id)}')">削除</button></td></tr>`;
+  }).join('');
+}
+// シフト表のツールバーに、表示中の期間の締め切りを表示
+function syncDeadlineChip(ym) {
+  const el=document.getElementById('shift-deadline-chip');
+  if(!el) return;
+  const fid=AppState.currentFacilityId;
+  if(!fid || !ym){ el.innerHTML=''; return; }
+  const dates = AppState.currentShiftView==='month' ? getPeriodDays(ym, AppState.shiftPeriod).map(fmtDate) : getMonthDays(ym).map(fmtDate);
+  const list = getFacilityDeadlines(fid).filter(x=>dates.some(d=>deadlineCovers(x,d)));
+  el.innerHTML = list.map(x=>{
+    const st=deadlineState(x);
+    return `<span class="dl-chip ${st}" title="${Security.escapeHtml(x.label)}">${Security.escapeHtml(x.label)}：${st==='closed'?'締め切り済み':`${Security.escapeHtml(fmtDeadline(x.deadlineAt))}まで`}${x.reopenDates.length&&st==='closed'?`（追加募集${x.reopenDates.length}日）`:''}</span>`;
+  }).join(' ');
+}
+
+/* ================================================================
    SHIFT VIEW (ADMIN)
 ================================================================ */
 function setShiftView(view) {
@@ -3162,6 +4486,39 @@ function setShiftView(view) {
   ['month','week','day'].forEach(v=>document.getElementById('view-btn-'+v)?.classList.remove('active'));
   document.getElementById('view-btn-'+view)?.classList.add('active');
   renderShiftView();
+}
+
+/* ver.7.6.0 No.8: 月表示の期間切替。シフト作成の単位（前半=1〜15日／後半=16日〜月末）に合わせる */
+const SHIFT_PERIODS = { full:'1か月', first:'前半', second:'後半' };
+function defaultShiftPeriod() { return new Date().getDate()<=15 ? 'first' : 'second'; }
+function setShiftPeriod(p) {
+  AppState.shiftPeriod = Object.prototype.hasOwnProperty.call(SHIFT_PERIODS, p) ? p : 'full';
+  Security.log('SHIFT_PERIOD', AppState.shiftPeriod);
+  renderShiftView();
+  const inner=document.querySelector('#shift-view-area .gantt-container');
+  if(inner) inner.scrollLeft=0; // 期間を切り替えたら先頭（1日／16日）から表示する
+}
+function getPeriodDays(ym, period) {
+  const days=getMonthDays(ym);
+  if(period==='first') return days.filter(d=>d.getDate()<=15);
+  if(period==='second') return days.filter(d=>d.getDate()>=16);
+  return days;
+}
+function syncPeriodToggle(ym) {
+  const isMonth = AppState.currentShiftView==='month';
+  const tg=document.getElementById('period-toggle');
+  if(tg) tg.style.display = isMonth ? '' : 'none';
+  Object.keys(SHIFT_PERIODS).forEach(k=>document.getElementById('period-btn-'+k)?.classList.toggle('active', AppState.shiftPeriod===k));
+  const lbl=document.getElementById('shift-period-label');
+  if(lbl){
+    if(!isMonth || !ym){ lbl.textContent=''; lbl.style.display='none'; }
+    else {
+      const days=getPeriodDays(ym, AppState.shiftPeriod);
+      const m=parseInt(ym.slice(5,7),10);
+      lbl.textContent = days.length ? `${m}/${days[0].getDate()}〜${m}/${days[days.length-1].getDate()}` : '';
+      lbl.style.display='';
+    }
+  }
 }
 function renderShiftView() {
   const ym=document.getElementById('shift-month').value;
@@ -3176,6 +4533,9 @@ function renderShiftView() {
   const prevOuterTop=area?area.scrollTop:0, prevOuterLeft=area?area.scrollLeft:0;
   const prevInner=area?area.querySelector('.gantt-container'):null;
   const prevInnerLeft=prevInner?prevInner.scrollLeft:0, prevInnerTop=prevInner?prevInner.scrollTop:0;
+  syncPeriodToggle(ym); // ver.7.6.0 No.8
+  updateMonthCloseButtonState(); // ver.8.0.0
+  syncDeadlineChip(ym); // ver.8.1.0
   if(AppState.currentShiftView==='month') renderMonthGantt(ym);
   else if(AppState.currentShiftView==='week') renderWeekGantt(ym);
   else renderDayGantt(ym);
@@ -3186,19 +4546,17 @@ function renderShiftView() {
 
 function renderMonthGantt(ym) {
   const fid=AppState.currentFacilityId;
-  const emps=getVisibleEmployeesForFacility(fid, ym);
-  const days=getMonthDays(ym);
+  const days=getPeriodDays(ym, AppState.shiftPeriod); // ver.7.6.0 No.8
+  const emps=filterSortAdminEmps(getVisibleEmployeesForFacility(fid, ym), fid, ym, days.map(fmtDate)); // ver.7.5.3 No.5/6
   const shifts=getShiftsFor(fid,ym);
   const area=document.getElementById('shift-view-area');
   const pendingAnnual=AppState.staffRequests.filter(r=>r.facilityId===fid&&r.ym===ym&&r.isAnnual&&r.status==='pending');
 
   let html='<div class="gantt-container"><table class="gantt-table"><thead><tr class="time-header-row"><th class="name-col">従業員</th>';
-  days.forEach(d=>{
-    const we=isWe(d);
-    html+=`<th class="date-col${we?' weekend-col':''}" style="min-width:62px">${d.getDate()}<br><span style="font-size:10px;color:${we?'#ef4444':'inherit'}">${getDow(d)}</span></th>`;
-  });
+  days.forEach(d=>{ html+=ganttDateHeadHtml(d, `${d.getDate()}`, 62, isFacilityClosedDay(fid,d)); }); // ver.7.6.0 No.3 / ver.7.7.0 No.4
   html+='</tr></thead><tbody>';
-  emps.forEach(emp=>{
+  emps.forEach((emp,ix)=>{
+    html+=jobGroupHeaderHtml(emps, ix, days.length+1); // ver.7.7.0 No.7
     const ep=pendingAnnual.filter(r=>r.empId===emp.id);
     const badge = ep.length>0 ? `<span class="pending-annual-badge" onclick="openAnnualApproveModal('${Security.escapeHtml(emp.id)}','${ym}')" title="未承認の年休希望: ${ep.map(r=>r.date).join('、')}">未承認 ×${ep.length}</span>` : '';
     const helperTag = emp.isHelper ? `<span class="badge badge-blue" style="font-size:9px;flex-shrink:0">他施設</span>` : '';
@@ -3208,11 +4566,10 @@ function renderMonthGantt(ym) {
       const ds=fmtDate(d);
       const shift=shifts.find(s=>s.empId===emp.id&&s.date===ds);
       const req=getRequestFor(emp.id, ds);
-      const we=isWe(d);
       let cell='';
-      const bg=we?'background:rgba(239,68,68,.04);':'';
+      const bg=dayCellBg(d); // ver.7.6.0 No.3
       if(shift){
-        if(shift.isOffDuty) cell=`<span class="month-cell-offduty">空き番</span>`;
+        if(shift.isOffDuty) cell=offDutyCellHtml(req); // ver.7.8.0 No.11
         else if(shift.isAnnual) cell=`<span class="month-cell-annual-confirmed">年休</span>`;
         else {
           const origReq=getRequestFor(emp.id, ds);
@@ -3224,11 +4581,12 @@ function renderMonthGantt(ym) {
         if(req.isAnnual) cell=`<span class="month-cell-annual-request">年休希望</span>`;
         else cell=`<span class="month-cell-request">${req.start}-${req.end}</span>`;
       }
-      html+=`<td style="${bg}cursor:pointer;padding:8px 2px;" onclick="openShiftEntryModal('${Security.escapeHtml(emp.id)}','${ds}')">${cell}</td>`;
+      if(shift) cell=wrapPubCell(shift, cell); // ver.8.0.0
+      html+=`<td class="${isFacilityClosedDay(fid,d)?'closed-day':''}" style="${bg}cursor:pointer;padding:8px 2px;" onclick="openShiftEntryModal('${Security.escapeHtml(emp.id)}','${ds}')">${cell}</td>`;
     });
     html+='</tr>';
   });
-  if(!emps.length) html+=`<tr><td colspan="${days.length+1}" style="padding:40px;text-align:center;color:var(--text-muted)">この施設に従業員がいません</td></tr>`;
+  if(!emps.length) html+=emptyEmpRowHtml(days.length+1);
   html+='</tbody></table></div>';
   area.innerHTML=html;
 }
@@ -3253,7 +4611,7 @@ function renderDayGantt(ym) {
 function renderDayWithHours(dateStr, ym) {
   AppState.currentDayDate = dateStr;
   const fid=AppState.currentFacilityId;
-  const emps=getVisibleEmployeesForFacility(fid, ym);
+  const emps=filterSortAdminEmps(getVisibleEmployeesForFacility(fid, ym), fid, ym, [dateStr]); // ver.7.5.3 No.5/6
   const shifts=getShiftsFor(fid,ym);
   const area=document.getElementById('shift-view-area');
   const d=new Date(dateStr+'T00:00:00');
@@ -3266,7 +4624,7 @@ function renderDayWithHours(dateStr, ym) {
 
   let html=`<div class="day-date-banner">
     ${prevDate?`<button class="day-nav-btn" onclick="renderDayWithHours('${prevDate}','${ym}')">← 前日</button>`:'<button class="day-nav-btn" disabled style="opacity:.3">← 前日</button>'}
-    <span>${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${getDow(d)}）</span>
+    <span>${dayBannerLabel(d)}${isFacilityClosedDay(fid,d)?closedDayBadge:''}</span>
     ${nextDate?`<button class="day-nav-btn" onclick="renderDayWithHours('${nextDate}','${ym}')">翌日 →</button>`:'<button class="day-nav-btn" disabled style="opacity:.3">翌日 →</button>'}
   </div>`;
 
@@ -3282,7 +4640,7 @@ function renderDayWithHours(dateStr, ym) {
         const workMin=calcWorkMinutes(editShift.start, editShift.end);
         const legal=calcLegalBreakMinutes(workMin);
         if(legal>0 && breakMin<legal){
-          alertHtml=`<span style="font-size:12px;color:var(--danger);font-weight:600">⚠ 法定休憩${legal}分以上のところ${breakMin}分です（保存は可能です）</span>`;
+          alertHtml=`<span style="font-size:12px;color:var(--danger);font-weight:600">⛔ 法定休憩${legal}分以上のところ${breakMin}分です（保存できません）</span>`;
         }
       }
     } else if(bStart && bEnd && bStart>=bEnd){
@@ -3310,7 +4668,8 @@ function renderDayWithHours(dateStr, ym) {
   html+='<div class="gantt-container"><table class="gantt-table"><thead><tr><th class="name-col">従業員</th>';
   hours.forEach(h=>{ html+=`<th colspan="2" class="hour-header" style="min-width:32px">${String(h).padStart(2,'0')}:00</th>`; });
   html+='</tr></thead><tbody>';
-  emps.forEach(emp=>{
+  emps.forEach((emp,ix)=>{
+    html+=jobGroupHeaderHtml(emps, ix, 49); // ver.7.7.0 No.7
     const shift=shifts.find(s=>s.empId===emp.id&&s.date===dateStr);
     const req=getRequestFor(emp.id, dateStr);
     const helperTag = emp.isHelper ? ` <span class="badge badge-blue" style="font-size:9px">他施設</span>` : '';
@@ -3320,7 +4679,9 @@ function renderDayWithHours(dateStr, ym) {
     const breakBtn = canSetBreak && !editing
       ? ` <button class="btn btn-outline btn-sm" style="padding:1px 6px;font-size:10px" onclick="enterBreakEditMode('${Security.escapeHtml(emp.id)}','${dateStr}')" title="休憩時間を設定">☕休憩設定</button>`
       : '';
-    html+=`<tr class="gantt-row"><td class="name-cell">${Security.escapeHtml(emp.name)}${helperTag}${concurrentTag}${breakBtn}</td>`;
+    const offTag = (shift && shift.isOffDuty) ? `<span class="offduty-tag">${KARA_MARK}${offDutyReqTime(req)||'空き番'}</span>` : ''; // ver.7.8.0 No.11
+    const offReq = (shift && shift.isOffDuty && offDutyReqTime(req)) ? req : null;
+    html+=`<tr class="gantt-row"><td class="name-cell">${Security.escapeHtml(emp.name)}${helperTag}${concurrentTag}${pubMarkHtml(shift)}${breakBtn}${offTag}</td>`;
     for(let h=0;h<24;h++){
       for(let hf=0;hf<2;hf++){
         const ts=`${String(h).padStart(2,'0')}:${hf===0?'00':'30'}`;
@@ -3334,10 +4695,10 @@ function renderDayWithHours(dateStr, ym) {
           html+=`<td class="${cls}" onclick="clickBreakCell('${ts}')" title="クリックで概算の休憩枠を設定"></td>`;
           continue;
         }
-        if(shift&&shift.isOffDuty) cls+=' cell-offduty';
+        if(shift&&shift.isOffDuty){ if(!offReq || (ts>=offReq.start && ts<offReq.end)) cls+=' cell-offduty'; }
         else if(inShift){
           const inBreak = shift.breakStart && shift.breakEnd && ts<shift.breakEnd && cellEndTs>shift.breakStart;
-          cls += inBreak ? ' cell-break' : ' cell-confirmed';
+          cls += inBreak ? ' cell-break' : (' cell-confirmed'+(shift.publishStatus==='draft'?' cell-draft':''));
         }
         else if(shift&&shift.isAnnual) cls+=' cell-annual-confirmed';
         else if(req&&req.status==='pending'&&!req.isAnnual&&ts>=req.start&&ts<req.end) cls+=' cell-request';
@@ -3347,7 +4708,7 @@ function renderDayWithHours(dateStr, ym) {
     }
     html+='</tr>';
   });
-  if(!emps.length) html+=`<tr><td colspan="49" style="padding:40px;text-align:center;color:var(--text-muted)">この施設に従業員がいません</td></tr>`;
+  if(!emps.length) html+=emptyEmpRowHtml(49); // ver.7.5.3 No.5
   html+='</tbody></table></div>';
   area.innerHTML=html;
 }
@@ -3356,7 +4717,7 @@ function renderDayWithHours(dateStr, ym) {
    #14 追加仕様: 「日」タブで休憩時間帯を直接割り当てる
    （実運用では当日/数日前のシフト状況を見ながら交代で休憩を組むため）
    仕様追加: タイムラインのクリックで概算(30分単位)を置き、プルダウンで15分単位に微調整する。
-   法定時間（6時間超45分・8時間超60分）を下回ってもアラート表示のみで保存は妨げない。
+   ver.7.6.0 No.10: 法定休憩を下回る場合は保存できない（日タブで設定した休憩は「手動」扱い）。
 ================================================================ */
 function addMinutesToTimeStr(t, min) {
   const [h,m]=t.split(':').map(Number);
@@ -3419,10 +4780,13 @@ async function saveBreakEdit() {
   const breakMinutes=calcWorkMinutes(t.breakStart,t.breakEnd);
   const shift=getShiftsFor(t.facilityId,t.ym).find(s=>s.empId===t.empId&&s.date===t.date);
   if(!shift?.id){ showNotif('対象のシフトが見つかりません','error'); return; }
+  // ver.7.6.0 No.10: 法定休憩を下回る場合は保存しない
+  const spanMin=calcWorkMinutes(shift.start, shift.end);
+  if(breakMinutes<calcLegalBreakMinutes(spanMin)){ showNotif(breakRuleMessage(spanMin, breakMinutes),'error'); return; }
   showLoading('保存中...');
   try {
-    await DB.patch('shifts', {break_start:t.breakStart, break_end:t.breakEnd, break_minutes:breakMinutes}, `?id=eq.${shift.id}`);
-    shift.breakStart=t.breakStart; shift.breakEnd=t.breakEnd; shift.breakMinutes=breakMinutes;
+    await saveShiftRowWithBreakFlag(shift.id, {break_start:t.breakStart, break_end:t.breakEnd, break_minutes:breakMinutes, break_manual:true});
+    shift.breakStart=t.breakStart; shift.breakEnd=t.breakEnd; shift.breakMinutes=breakMinutes; shift.breakManual=true;
     Security.log('BREAK_SET', `${t.empId}@${t.date} ${t.breakStart}-${t.breakEnd}`);
     AppState.breakEditTarget=null;
     renderDayWithHours(t.date, t.ym);
@@ -3437,17 +4801,15 @@ async function saveBreakEdit() {
 
 function renderDaysSimple(days, ym) {
   const fid=AppState.currentFacilityId;
-  const emps=getVisibleEmployeesForFacility(fid, ym);
+  const emps=filterSortAdminEmps(getVisibleEmployeesForFacility(fid, ym), fid, ym, days.map(fmtDate)); // ver.7.5.3 No.5/6
   const shifts=getShiftsFor(fid,ym);
   const area=document.getElementById('shift-view-area');
   const pendingAnnual=AppState.staffRequests.filter(r=>r.facilityId===fid&&r.ym===ym&&r.isAnnual&&r.status==='pending');
   let html='<div class="gantt-container"><table class="gantt-table"><thead><tr class="time-header-row"><th class="name-col">従業員</th>';
-  days.forEach(d=>{
-    const we=isWe(d);
-    html+=`<th class="date-col${we?' weekend-col':''}">${d.getMonth()+1}/${d.getDate()}<br><span style="font-size:10px;color:${we?'#ef4444':'inherit'}">${getDow(d)}</span></th>`;
-  });
+  days.forEach(d=>{ html+=ganttDateHeadHtml(d, `${d.getMonth()+1}/${d.getDate()}`, null, isFacilityClosedDay(fid,d)); }); // ver.7.6.0 No.3 / ver.7.7.0 No.4
   html+='</tr></thead><tbody>';
-  emps.forEach(emp=>{
+  emps.forEach((emp,ix)=>{
+    html+=jobGroupHeaderHtml(emps, ix, days.length+1); // ver.7.7.0 No.7
     const ep=pendingAnnual.filter(r=>r.empId===emp.id);
     const badge = ep.length>0 ? `<span class="pending-annual-badge" onclick="openAnnualApproveModal('${Security.escapeHtml(emp.id)}','${ym}')" title="未承認の年休希望: ${ep.map(r=>r.date).join('、')}">未承認 ×${ep.length}</span>` : '';
     const helperTag = emp.isHelper ? `<span class="badge badge-blue" style="font-size:9px;flex-shrink:0">他施設</span>` : '';
@@ -3457,10 +4819,9 @@ function renderDaysSimple(days, ym) {
       const ds=fmtDate(d);
       const shift=shifts.find(s=>s.empId===emp.id&&s.date===ds);
       const req=getRequestFor(emp.id,ds);
-      const we=isWe(d);
       let cell='';
       if(shift){
-        if(shift.isOffDuty) cell=`<span class="month-cell-offduty">空き番</span>`;
+        if(shift.isOffDuty) cell=offDutyCellHtml(req); // ver.7.8.0 No.11
         else if(shift.isAnnual) cell=`<span class="month-cell-annual-confirmed">年休</span>`;
         else {
           const origReq=getRequestFor(emp.id,ds);
@@ -3469,10 +4830,12 @@ function renderDaysSimple(days, ym) {
           else cell=`<span class="month-cell-confirmed">${shift.start}-${shift.end}</span>${breakBadgeHtml(shift)}`;
         }
       } else if(req&&req.status==='pending') cell=req.isAnnual?`<span class="month-cell-annual-request">年休希望</span>`:`<span class="month-cell-request">${req.start}-${req.end}</span>`;
-      html+=`<td style="${we?'background:rgba(239,68,68,.04);':''}cursor:pointer;min-width:80px;padding:8px 2px" onclick="openShiftEntryModal('${Security.escapeHtml(emp.id)}','${ds}')">${cell}</td>`;
+      if(shift) cell=wrapPubCell(shift, cell); // ver.8.0.0
+      html+=`<td class="${isFacilityClosedDay(fid,d)?'closed-day':''}" style="${dayCellBg(d)}cursor:pointer;min-width:80px;padding:8px 2px" onclick="openShiftEntryModal('${Security.escapeHtml(emp.id)}','${ds}')">${cell}</td>`;
     });
     html+='</tr>';
   });
+  if(!emps.length) html+=emptyEmpRowHtml(days.length+1);
   html+='</tbody></table></div>';
   area.innerHTML=html;
 }
@@ -3573,12 +4936,14 @@ function openShiftEntryModal(empId, date) {
   const shift=getShiftsFor(fid,ym).find(s=>s.empId===empId&&s.date===date);
   if(shift){ document.getElementById('shift-start').value=shift.start||'09:00'; document.getElementById('shift-end').value=shift.end||'17:00'; document.getElementById('shift-is-annual').checked=!!shift.isAnnual; }
   // #14 修正: 休憩時間欄を初期化。既存シフトに設定済みならその値、なければ勤務時間から法定休憩を自動提案する
+  // ver.7.6.0 No.10: 手動で設定済みのシフトはその値を、それ以外は法定ルールの自動値を入れる
   const breakEl=document.getElementById('shift-break-minutes');
-  if(shift && shift.breakMinutes!=null){
+  AppState.shiftBreakManual = !!(shift && !shift.isAnnual && !shift.isOffDuty && isShiftBreakManual(shift));
+  if(AppState.shiftBreakManual && shift.breakMinutes!=null){
     breakEl.value=shift.breakMinutes;
   } else {
     const s=document.getElementById('shift-start').value, e=document.getElementById('shift-end').value;
-    breakEl.value=calcLegalBreakMinutes(calcWorkMinutes(s,e));
+    breakEl.value=calcAutoBreakMinutes(calcWorkMinutes(s,e));
   }
   updateShiftBreakAlert();
   showRequestHint(empId, date);
@@ -3589,6 +4954,7 @@ function openShiftEntryModal(empId, date) {
   if(shift?.id){
     getShiftActivitiesFor(fid, ym).filter(a=>a.shiftId===shift.id).forEach(a=>addShiftActivityRow(a.activityId, a.start, a.end));
   }
+  renderShiftModalPublishState(shift); // ver.8.0.0 No.13/14（個別項目の行を作った後にロックを反映）
   openModal('modal-shift-entry');
 }
 
@@ -3606,7 +4972,8 @@ async function fetchOtherFacilityConfirmedShifts(empId, date, excludeFacilityId)
         start: r.start_time || '09:00',
         end: r.end_time || '17:00',
         isAnnual: !!r.is_annual,
-        isOffDuty: !!r.is_offduty
+        isOffDuty: !!r.is_offduty,
+        isDraft: r.publish_status==='draft' // ver.8.0.0
       }))
       .filter(s => !s.isOffDuty);
   } catch (err) {
@@ -3662,7 +5029,7 @@ async function showRequestHint(empId, date) {
     const otherLines = otherShifts.map(s=>{
       const f = AppState.facilities.find(x=>x.id===s.facilityId);
       const fname = f ? Security.escapeHtml(f.name) : '他施設';
-      return s.isAnnual ? `${fname}: 年休確定済み` : `${fname}: ${Security.escapeHtml(s.start)} ～ ${Security.escapeHtml(s.end)}（確定済み）`;
+      return s.isAnnual ? `${fname}: 年休${s.isDraft?'（仮確定）':'確定済み'}` : `${fname}: ${Security.escapeHtml(s.start)} ～ ${Security.escapeHtml(s.end)}（${s.isDraft?'仮確定':'確定済み'}）`;
     });
     let extraHtml = `<div style="margin-top:6px">他施設の状況:<br>${otherLines.join('<br>')}</div>`;
     const timeBlocks = otherShifts.filter(s=>!s.isAnnual);
@@ -3766,9 +5133,109 @@ function onShiftEmpChange() {
   const empId=Security.sanitizeStr(document.getElementById('shift-emp-select').value);
   const {date}=AppState.shiftEditTarget;
   if(empId&&date) showRequestHint(empId, date);
+  renderShiftModalPublishState(getEditingShift()); // ver.8.0.0
 }
 
-async function saveShiftEntry() {
+/* ver.8.0.0 No.13/14: シフト入力モーダルの状態表示とボタン
+   ・未登録／仮確定 … 「仮確定で保存」（スタッフには見えない）
+   ・確定 … 入力欄をロックし「確定解除」のみ
+   ・確定解除中 … 「保存（調整中のまま）」「保存して再確定」「空き番で再確定」「解除を取り消す」 */
+function getEditingShift() {
+  const t=AppState.shiftEditTarget||{};
+  const empId=document.getElementById('shift-emp-select')?.value;
+  return (t.facilityId && t.ym && empId) ? getShiftsFor(t.facilityId, t.ym).find(sh=>sh.empId===empId && sh.date===t.date) : null;
+}
+function setShiftModalLocked(locked) {
+  AppState.shiftModalLocked = !!locked;
+  document.querySelectorAll('#modal-shift-entry .modal-body input, #modal-shift-entry .modal-body select, #modal-shift-entry .modal-body textarea, #modal-shift-entry .modal-body .btn:not(.pub-keep)')
+    .forEach(el=>{ if(el.id!=='shift-emp-select') el.disabled=!!locked; });
+}
+function renderShiftModalPublishState(shift) {
+  const st = shift ? shift.publishStatus : null;
+  const banner=document.getElementById('shift-publish-banner');
+  const show=(id,on)=>{ const el=document.getElementById(id); if(el) el.style.display=on?'':'none'; };
+  const fmtWhen=v=>v?new Date(v).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  if(st==='published'){
+    banner.className='pub-banner published'; banner.style.display='';
+    banner.innerHTML=`<span>✓ 確定済み（スタッフに公開中${shift.publishedAt?`・${fmtWhen(shift.publishedAt)}公開`:''}）。修正するには「確定解除」してください</span>`;
+    setShiftModalLocked(true);
+    show('shift-unpublish-btn',true); show('shift-offduty-btn',false); show('shift-save-btn',false); show('shift-republish-btn',false);
+  } else if(st==='reopened'){
+    const sn=shift.publishedSnapshot;
+    const was = sn ? (sn.isOffDuty?'空き番':(sn.isAnnual?'年休':`${sn.start}-${sn.end}`)) : '';
+    banner.className='pub-banner reopened'; banner.style.display='';
+    banner.innerHTML=`<span>確定解除中：スタッフには元の確定内容（${Security.escapeHtml(was)}）を「調整中」と表示しています。修正したら「保存して再確定」を押してください</span>`
+      + `<button type="button" class="btn btn-outline btn-sm pub-keep" onclick="cancelUnpublishShift()">解除を取り消す</button>`;
+    setShiftModalLocked(false);
+    show('shift-unpublish-btn',false); show('shift-offduty-btn',true); show('shift-save-btn',true); show('shift-republish-btn',true);
+    document.getElementById('shift-save-btn-label').textContent='保存（調整中のまま）';
+    document.getElementById('shift-offduty-btn').lastChild.textContent=' 空き番で再確定';
+  } else {
+    banner.className='pub-banner draft';
+    banner.style.display = st==='draft' ? '' : 'none';
+    banner.innerHTML = st==='draft' ? '<span>仮確定（スタッフには未公開）。「一斉確定」でまとめて公開されます</span>' : '';
+    setShiftModalLocked(false);
+    show('shift-unpublish-btn',false); show('shift-offduty-btn',true); show('shift-save-btn',true); show('shift-republish-btn',false);
+    document.getElementById('shift-save-btn-label').textContent='仮確定で保存';
+    document.getElementById('shift-offduty-btn').lastChild.textContent=' 空き番';
+  }
+  updateShiftBreakAlert();
+}
+// 申請の状態を、公開されたシフトに合わせる
+async function syncRequestToPublishedShift(empId, date, isOffDuty) {
+  const req=getRequestFor(empId, date);
+  if(!req?.id || !['pending','confirmed','offduty'].includes(req.status)) return;
+  const st = isOffDuty ? 'offduty' : 'confirmed';
+  if(req.status===st) return;
+  await DB.patch('shift_requests', {status:st}, `?id=eq.${encodeURIComponent(req.id)}`);
+  req.status=st;
+}
+// 確定解除（No.14）
+async function unpublishShift() {
+  if(!Auth.requireAdmin()) return;
+  const sh=getEditingShift();
+  if(!sh || sh.publishStatus!=='published'){ showNotif('確定済みのシフトがありません','error'); return; }
+  if(!confirm('このシフトの確定を解除しますか？\n解除中もスタッフには元の確定内容が「調整中」と表示されます。\n（運用ルール：変更する場合は本人に連絡して合意を得てください）')) return;
+  showLoading('処理中...');
+  try {
+    await DB.patch('shifts', {publish_status:'reopened', published_snapshot:snapshotOfShift(sh)}, `?id=eq.${encodeURIComponent(sh.id)}`);
+    Security.log('UNPUBLISH', `${sh.empId}@${sh.date}`, 'WARN');
+    const t=AppState.shiftEditTarget;
+    await loadShiftsForMonth(t.facilityId, t.ym);
+    renderShiftView();
+    renderShiftModalPublishState(getEditingShift());
+    showNotif('確定を解除しました。修正後に「保存して再確定」を押してください');
+  } catch(err) {
+    showNotif(isPublishColumnErr(err)?PUBLISH_COLUMN_MSG:'確定解除に失敗しました','error');
+    Security.log('UNPUBLISH_ERR', err.message, 'ERROR');
+  } finally { hideLoading(); }
+}
+// 解除を取り消す（元の確定内容に戻して確定）
+async function cancelUnpublishShift() {
+  if(!Auth.requireAdmin()) return;
+  const sh=getEditingShift();
+  if(!sh || sh.publishStatus!=='reopened'){ return; }
+  const sn=sh.publishedSnapshot;
+  if(!confirm('確定解除を取り消し、元の確定内容に戻しますか？（解除中に行った修正は破棄されます）')) return;
+  showLoading('処理中...');
+  try {
+    const body={publish_status:'published', published_snapshot:null};
+    if(sn) Object.assign(body, {start_time:sn.isOffDuty?'00:00':sn.start, end_time:sn.isOffDuty?'00:00':sn.end, is_annual:sn.isAnnual, is_offduty:sn.isOffDuty,
+      break_minutes:sn.breakMinutes, break_start:sn.breakStart, break_end:sn.breakEnd});
+    await DB.patch('shifts', body, `?id=eq.${encodeURIComponent(sh.id)}`);
+    Security.log('UNPUBLISH_CANCEL', `${sh.empId}@${sh.date}`);
+    const t=AppState.shiftEditTarget;
+    await loadShiftsForMonth(t.facilityId, t.ym);
+    closeModal('modal-shift-entry');
+    renderShiftView();
+    showNotif('確定解除を取り消しました','success');
+  } catch(err) {
+    showNotif('取り消しに失敗しました','error');
+    Security.log('UNPUBLISH_CANCEL_ERR', err.message, 'ERROR');
+  } finally { hideLoading(); }
+}
+
+async function saveShiftEntry(republish) {
   const empId=Security.sanitizeStr(document.getElementById('shift-emp-select').value,20);
   const start=Security.sanitizeStr(document.getElementById('shift-start').value,5);
   const end=Security.sanitizeStr(document.getElementById('shift-end').value,5);
@@ -3782,29 +5249,42 @@ async function saveShiftEntry() {
   if(!isAnnual){
     const workMin=calcWorkMinutes(start,end);
     if(breakMinutes>workMin){showNotif('休憩時間が勤務時間を超えています','error');return;}
+    // ver.7.6.0 No.10: 法定休憩を下回る場合は保存しない
+    if(breakMinutes<calcLegalBreakMinutes(workMin)){
+      showNotif(breakRuleMessage(workMin, breakMinutes),'error');
+      updateShiftBreakAlert();
+      Security.log('BREAK_BELOW_LEGAL_BLOCKED', `${empId}@${date} span:${workMin} break:${breakMinutes}`, 'WARN');
+      return;
+    }
   }
 
+  // ver.8.0.0 No.13/14: 確定済みのシフトは確定解除してから修正する
+  const existing0=getShiftsFor(facilityId,ym).find(s=>s.empId===empId&&s.date===date);
+  if(existing0 && existing0.publishStatus==='published'){ showNotif('確定済みのシフトです。修正するには「確定解除」してください','error'); return; }
+  republish = !!republish && existing0?.publishStatus==='reopened';
   showLoading('保存中...');
   try {
-    const existing=getShiftsFor(facilityId,ym).find(s=>s.empId===empId&&s.date===date);
-    const payload={emp_id:empId,facility_id:facilityId,date,ym,start_time:start,end_time:end,is_annual:isAnnual,is_offduty:false,break_minutes:breakMinutes};
+    const existing=existing0;
+    const payload={emp_id:empId,facility_id:facilityId,date,ym,start_time:start,end_time:end,is_annual:isAnnual,is_offduty:false,break_minutes:breakMinutes,
+      break_manual: isAnnual ? false : !!AppState.shiftBreakManual}; // ver.7.6.0 No.10
+    if(existing?.publishStatus==='reopened'){
+      payload.publish_status = republish ? 'published' : 'reopened';
+      if(republish){
+        payload.published_snapshot = null;
+        if(shiftContentDiffers({start,end,isAnnual,isOffDuty:false,breakMinutes}, existing.publishedSnapshot)) payload.republished_at = new Date().toISOString();
+      }
+    } else {
+      payload.publish_status = 'draft'; // 新規・仮確定 → 仮確定（スタッフには未公開）
+    }
     // 仕様変更: モーダルで休憩「分数」を直接変更した場合、「日」タブでコマ単位に設定した正確な時間帯(break_start/break_end)は
     // 実態と一致しなくなるため破棄する。分数を変更していなければ既存の時間帯情報はそのまま維持する。
     if(!(existing && existing.breakMinutes===breakMinutes)){
       payload.break_start=null;
       payload.break_end=null;
     }
-    if(existing?.id) {
-      await DB.patch('shifts', payload, `?id=eq.${existing.id}`);
-    } else {
-      await DB.post('shifts', payload);
-    }
-    // リクエストをconfirmedに更新
-    const req=getRequestFor(empId, date);
-    if(req&&req.status==='pending'&&req.id) {
-      await DB.patch('shift_requests', {status:'confirmed'}, `?id=eq.${req.id}`);
-      req.status='confirmed';
-    }
+    await saveShiftRowWithBreakFlag(existing?.id||null, payload); // ver.7.6.0 No.10
+    // ver.8.0.0: 申請の状態は公開（一斉確定・再確定）のときに更新する。仮確定の間は「申請中」のまま
+    if(republish) await syncRequestToPublishedShift(empId, date, false);
     // ローカルStateも更新
     await loadShiftsForMonth(facilityId, ym);
     // #10 修正: 個別項目（教室等）の記録を保存する。シフト本体の保存が成功していれば、この失敗でシフト保存自体は取り消さない
@@ -3821,12 +5301,14 @@ async function saveShiftEntry() {
         Security.log('SHIFT_ACTIVITY_SAVE_ERR', actErr.message, 'ERROR');
       }
     }
-    Security.log('SHIFT_CONFIRM',`${empId}@${date}`);
+    Security.log(republish?'SHIFT_REPUBLISH':'SHIFT_DRAFT_SAVE',`${empId}@${date}`);
     closeModal('modal-shift-entry');
     renderShiftView();
-    showNotif('シフトを確定しました','success');
+    showNotif(republish ? '再確定しました（スタッフ画面に反映されました）'
+      : (existing?.publishStatus==='reopened' ? '保存しました（確定解除中のまま）' : '仮確定で保存しました（「一斉確定」でスタッフに公開されます）'),'success');
   } catch(err) {
     let msg='保存に失敗しました';
+    if(isPublishColumnErr(err)) msg=PUBLISH_COLUMN_MSG;
     if(/column .*break_minutes/i.test(err.message||'')) msg='休憩時間機能に必要なカラムがDBに未追加です。Supabaseのshiftsテーブルにbreak_minutes(int, nullable)を追加してください';
     showNotif(msg,'error');
     Security.log('SHIFT_SAVE_ERR', err.message, 'ERROR');
@@ -3838,26 +5320,31 @@ async function saveOffDuty() {
   const {date,ym,facilityId}=AppState.shiftEditTarget;
   if(!empId){showNotif('従業員を選択してください','error');return;}
 
+  // ver.8.0.0: 確定済みは確定解除が必要。確定解除中なら「空き番で再確定」、それ以外は仮確定
+  const existing0=getShiftsFor(facilityId,ym).find(s=>s.empId===empId&&s.date===date);
+  if(existing0 && existing0.publishStatus==='published'){ showNotif('確定済みのシフトです。変更するには「確定解除」してください','error'); return; }
+  const republish = existing0?.publishStatus==='reopened';
   showLoading('保存中...');
   try {
-    const existing=getShiftsFor(facilityId,ym).find(s=>s.empId===empId&&s.date===date);
-    const payload={emp_id:empId,facility_id:facilityId,date,ym,start_time:'00:00',end_time:'00:00',is_annual:false,is_offduty:true,break_minutes:null,break_start:null,break_end:null};
+    const existing=existing0;
+    const payload={emp_id:empId,facility_id:facilityId,date,ym,start_time:'00:00',end_time:'00:00',is_annual:false,is_offduty:true,break_minutes:null,break_start:null,break_end:null,
+      publish_status: republish ? 'published' : 'draft'};
+    if(republish){
+      payload.published_snapshot=null;
+      if(!existing.publishedSnapshot?.isOffDuty) payload.republished_at=new Date().toISOString();
+    }
     if(existing?.id) await DB.patch('shifts', payload, `?id=eq.${existing.id}`);
     else await DB.post('shifts', payload);
     // #10 修正: 空き番に変更した場合、紐づく個別項目の記録は意味を持たなくなるため削除する（未対応環境ではエラーを無視）
     if(existing?.id){ try { await DB.del('shift_activities', `?shift_id=eq.${encodeURIComponent(existing.id)}`); } catch(e){} }
-    const req=getRequestFor(empId, date);
-    if(req&&req.status==='pending'&&req.id) {
-      await DB.patch('shift_requests', {status:'offduty'}, `?id=eq.${req.id}`);
-      req.status='offduty';
-    }
+    if(republish) await syncRequestToPublishedShift(empId, date, true); // 仮確定の間は申請中のまま
     await loadShiftsForMonth(facilityId, ym);
-    Security.log('OFFDUTY_SET',`${empId}@${date}`);
+    Security.log(republish?'OFFDUTY_REPUBLISH':'OFFDUTY_SET',`${empId}@${date}`);
     closeModal('modal-shift-entry');
     renderShiftView();
-    showNotif('空き番（非出勤）として登録しました');
+    showNotif(republish ? '空き番で再確定しました（スタッフ画面に反映されました）' : '空き番（仮確定）として登録しました');
   } catch(err) {
-    showNotif('保存に失敗しました','error');
+    showNotif(isPublishColumnErr(err)?PUBLISH_COLUMN_MSG:'保存に失敗しました','error');
   } finally { hideLoading(); }
 }
 
@@ -3892,7 +5379,8 @@ async function approveAnnual(empId, date) {
     if(req?.id) await DB.patch('shift_requests', {status:'confirmed'}, `?id=eq.${req.id}`);
     if(fid){
       const existing=getShiftsFor(fid,ym).find(s=>s.empId===empId&&s.date===date);
-      const payload={emp_id:empId,facility_id:fid,date,ym,start_time:'09:00',end_time:'17:00',is_annual:true,is_offduty:false};
+      const payload={emp_id:empId,facility_id:fid,date,ym,start_time:'09:00',end_time:'17:00',is_annual:true,is_offduty:false,
+        publish_status:'published', published_at:new Date().toISOString(), published_snapshot:null}; // ver.8.0.0: 年休の承認はその場で公開
       if(existing?.id) await DB.patch('shifts', payload, `?id=eq.${existing.id}`);
       else await DB.post('shifts', payload);
       await loadShiftsForMonth(fid, ym);
@@ -4653,6 +6141,42 @@ async function exportKinmuhyoShareiExcel() {
 /* ================================================================
    STAFF CALENDAR
 ================================================================ */
+// No.16: 申請者トップの締め切り案内（受付中のもの＋表示中の月で締め切り済みのもの）
+function renderStaffDeadlineBanner(ym) {
+  const box=document.getElementById('staff-deadline-banner');
+  if(!box) return;
+  const fids=getStaffFacilities();
+  const multi=fids.length>1;
+  const now=Date.now();
+  const items=[];
+  fids.forEach(fid=>{
+    const fname=AppState.facilities.find(f=>f.id===fid)?.name||'';
+    getFacilityDeadlines(fid).forEach(x=>{
+      const st=deadlineState(x, now);
+      if(st!=='closed' || x.ym===ym) items.push({x, st, fname});
+    });
+  });
+  items.sort((p,q)=>p.x.deadlineAt.localeCompare(q.x.deadlineAt));
+  if(!items.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='';
+  box.innerHTML=items.map(({x,st,fname})=>{
+    const head = `${multi?`【${Security.escapeHtml(fname)}】`:''}${Security.escapeHtml(x.label)}`;
+    if(st==='closed'){
+      const re = x.reopenDates.filter(d=>d>=fmtDate(new Date(now)));
+      return `<div class="dl-item closed"><span class="dl-tag">受付終了</span><span>${head}の申請は締め切りました</span>`
+        + (re.length?`<span class="dl-reopen">追加募集中：${re.map(fmtMdDow).map(Security.escapeHtml).join('、')}</span>`:'') + '</div>';
+    }
+    return `<div class="dl-item ${st}"><span class="dl-tag">${st==='soon'?'締め切り間近':'受付中'}</span>`
+      + `<span>${head}の申請締め切り：${Security.escapeHtml(fmtDeadline(x.deadlineAt))}（${Security.escapeHtml(fmtLeft(x.deadlineAt, now))}）</span></div>`;
+  }).join('');
+}
+// カレンダー用：本人のどの所属施設でも締め切り済みならロック
+function getStaffDateLock(ds) {
+  const fids=getStaffFacilities();
+  const locks=fids.map(fid=>getRequestLock(fid, ds));
+  return { locked: locks.length>0 && locks.every(l=>l.locked), reopened: locks.some(l=>l.reopened) };
+}
+
 function renderStaffCalendar() {
   const ym=document.getElementById('staff-month').value;
   if(!ym) return;
@@ -4662,10 +6186,11 @@ function renderStaffCalendar() {
   const container=document.getElementById('staff-shift-calendar');
   const reqs=AppState.staffRequests.filter(r=>r.empId===u.id&&r.ym===ym);
   const multiFacility = getStaffFacilities().length>1;
+  renderStaffDeadlineBanner(ym); // ver.8.1.0 No.16
 
   let html='<div class="staff-cal-grid">';
   ['日','月','火','水','木','金','土'].forEach((d,i)=>{
-    html+=`<div style="text-align:center;font-size:12px;font-weight:600;padding:6px;color:${i===0||i===6?'var(--danger)':'var(--text-secondary)'}">${d}</div>`;
+    html+=`<div style="text-align:center;font-size:12px;font-weight:600;padding:6px;color:${i===0?'var(--hol)':(i===6?'var(--sat)':'var(--text-secondary)')}">${d}</div>`;
   });
   const firstDow=days[0].getDay();
   for(let i=0;i<firstDow;i++) html+='<div></div>';
@@ -4673,7 +6198,9 @@ function renderStaffCalendar() {
     const ds=fmtDate(d);
     const req=reqs.find(r=>r.date===ds);
     const shift=getStaffShiftForDate(u.id, ds, ym);
-    const we=isWe(d);
+    const kind=getDayKind(d); // ver.7.6.0 No.3
+    const holName=JpHoliday.name(d);
+    const isClosed=isFacilityClosedDay(emp?.facilityId||u.facilityId, d); // ver.7.7.0 No.4
     const isToday=todayStr()===ds;
     let cls='staff-cal-day';
     let statusHtml='';
@@ -4681,12 +6208,21 @@ function renderStaffCalendar() {
       ? `<span class="staff-cal-label" style="background:var(--accent-soft);color:#1d4ed8">${Security.escapeHtml(AppState.facilities.find(f=>f.id===shift.facilityId)?.name||'')}</span>` : '';
     // #5 修正: スタッフ画面では「却下」「時間変更」を表示せず、確定シフトと有給休暇のみを表示する
     if(shift){
-      if(shift.isOffDuty){ cls+=' is-locked has-offduty'; statusHtml='<span class="staff-cal-label offduty">空き番<br>（非出勤）</span>'; }
+      if(shift.isOffDuty){ cls+=' is-locked has-offduty'; const t=offDutyReqTime(req); statusHtml=`<span class="staff-cal-label offduty">${KARA_MARK}空き番${t?`<br>申請 ${t}`:'<br>（非出勤）'}</span>`; }
       else {
         cls+=shift.isAnnual?' has-annual-confirmed':' has-confirmed'; cls+=' is-locked';
         if(shift.isAnnual) statusHtml='<span class="staff-cal-label annual-confirmed">年休（確定）</span>';
         else {
-          statusHtml=`<span class="staff-cal-label confirmed">${Security.escapeHtml(shift.start)}-${Security.escapeHtml(shift.end)}<br>（確定）</span>`;
+          // ver.7.5.3 No.12: 申請した時間と違う時間で確定された場合は「変更あり」の色で表示し、申請時間を併記する
+          const myReq = (req && !req.isAnnual && req.start && req.end) ? req : null;
+          const isChanged = (myReq && (myReq.start!==shift.start || myReq.end!==shift.end)) || (!!shift.republishedAt && !shift.adjusting); // ver.8.0.0: 再確定も「変更あり」
+          if(isChanged){
+            cls = cls.replace(' has-confirmed',' has-changed');
+            statusHtml=`<span class="staff-cal-label changed">${Security.escapeHtml(shift.start)}-${Security.escapeHtml(shift.end)}<br>（確定・変更あり）</span>`
+              + (myReq ? `<span class="staff-cal-label changed-req" title="申請していた時間">申請 ${Security.escapeHtml(myReq.start)}-${Security.escapeHtml(myReq.end)}</span>` : '');
+          } else {
+            statusHtml=`<span class="staff-cal-label confirmed">${Security.escapeHtml(shift.start)}-${Security.escapeHtml(shift.end)}<br>（確定）</span>`;
+          }
           // 追加修正: 確定済みシフトに個別項目（教室等）が設定されていれば、名前と時間帯を表示する（金額は表示しない）
           const acts = getStaffShiftActivitiesForDate(u.id, ds, ym);
           if(acts.length){
@@ -4697,9 +6233,10 @@ function renderStaffCalendar() {
           }
         }
       }
+      if(shift.adjusting) statusHtml = '<span class="staff-cal-label adjusting" title="管理者が調整中です。変更がある場合は担当者から連絡があります">調整中</span>' + statusHtml; // ver.8.0.0 No.14
       statusHtml += facBadge;
     } else if(req){
-      if(req.status==='offduty'){ cls+=' is-locked has-offduty'; statusHtml='<span class="staff-cal-label offduty">空き番<br>（非出勤）</span>'; }
+      if(req.status==='offduty'){ cls+=' is-locked has-offduty'; const t=offDutyReqTime(req); statusHtml=`<span class="staff-cal-label offduty">${KARA_MARK}空き番${t?`<br>申請 ${t}`:'<br>（非出勤）'}</span>`; }
       else if(req.status==='confirmed'){
         const cStart=req.start; const cEnd=req.end;
         cls+=' has-confirmed is-locked';
@@ -4708,9 +6245,18 @@ function renderStaffCalendar() {
       else { cls+=' has-request'; if(req.isAnnual) statusHtml='<span class="staff-cal-label annual-request">年休希望<br>（申請中）</span>'; else statusHtml=`<span class="staff-cal-label request">${Security.escapeHtml(req.start)}-${Security.escapeHtml(req.end)}<br>（申請中）</span>`; }
     } else { statusHtml='<span class="staff-cal-label hint">タップして入力</span>'; }
     if(isToday) cls+=' is-today';
+    if(isClosed) cls+=' is-closed';
+    // ver.8.1.0 No.15: 締め切り後は入力できない（追加募集の日は受付）
+    const dlLock=getStaffDateLock(ds);
+    if(dlLock.locked && !cls.includes('is-locked')){
+      cls+=' is-locked';
+      statusHtml = statusHtml.includes('タップして入力') ? '<span class="staff-cal-label dl-closed">受付終了</span>' : statusHtml+'<span class="staff-cal-label dl-closed">受付終了</span>';
+    } else if(dlLock.reopened && !cls.includes('is-locked')){
+      statusHtml = '<span class="staff-cal-label dl-reopen">追加募集</span>' + statusHtml;
+    }
     const locked=cls.includes('is-locked');
     html+=`<div class="${cls}" ${locked?'':`onclick="openStaffMultiEntry('${ds}')"`}>
-      <div class="staff-day-num${we?' weekend':''}">${d.getDate()}</div>
+      <div class="staff-day-num${(kind==='hol'||kind==='sun')?' weekend':(kind==='sat'?' saturday':'')}"${holName?` title="${Security.escapeHtml(holName)}"`:''}>${d.getDate()}<span class="staff-day-dow">(${getDow(d)})</span>${holName?`<span class="staff-hol-name">${Security.escapeHtml(holName)}</span>`:''}${isClosed?'<span class="staff-closed-name">定休日</span>':''}</div>
       ${statusHtml}
     </div>`;
   });
@@ -4721,6 +6267,12 @@ function renderStaffCalendar() {
 /* ================================================================
    STAFF MULTI-DATE ENTRY
 ================================================================ */
+function getStaffEntryFacilityId() {
+  const u=AppState.currentUser;
+  const emp=AppState.employees.find(e=>e.id===u?.id);
+  const facWrap=document.getElementById('staff-entry-facility-wrap');
+  return (facWrap && facWrap.style.display!=='none' ? document.getElementById('staff-entry-facility').value : emp?.facilityId) || u?.facilityId || '';
+}
 function openStaffMultiEntry(initialDate) {
   initialDate=Security.sanitizeStr(initialDate,10);
   const ym=document.getElementById('staff-month').value;
@@ -4740,6 +6292,8 @@ function openStaffMultiEntry(initialDate) {
     }).join('');
     facSel.value=emp?.facilityId||facIds[0];
     facWrap.style.display='block';
+    // ver.8.1.0 No.15: 施設を切り替えたら、その施設の締め切りで選べる日を作り直す
+    facSel.onchange=()=>{ renderStaffMultiDateGrid(getMonthDays(AppState.staffModalState.ym), AppState.staffModalState.ym, AppState.currentUser.id); updateStaffPreview(); };
   } else {
     facWrap.style.display='none';
   }
@@ -4763,23 +6317,39 @@ function openStaffMultiEntry(initialDate) {
 function renderStaffMultiDateGrid(days, ym, empId) {
   const grid=document.getElementById('staff-multi-date-grid');
   const reqs=AppState.staffRequests.filter(r=>r.empId===empId&&r.ym===ym);
+  const closedFid=AppState.employees.find(e=>e.id===empId)?.facilityId || AppState.currentUser?.facilityId; // ver.7.7.0 No.4
+  const reqFid=getStaffEntryFacilityId(); // ver.8.1.0 No.15
   grid.innerHTML='';
+  // ver.7.5.3 No.2: 曜日の見出し行と、1日の曜日に合わせた空白セルを追加（列＝曜日になるよう揃える）
+  ['日','月','火','水','木','金','土'].forEach((w,i)=>{
+    const h=document.createElement('div');
+    h.className='multi-date-dow'+(i===0?' weekend':(i===6?' saturday':''));
+    h.textContent=w;
+    grid.appendChild(h);
+  });
+  for(let i=0;i<(days[0]?days[0].getDay():0);i++) grid.appendChild(document.createElement('div'));
   days.forEach(d=>{
     const ds=fmtDate(d);
     const isSelected=AppState.staffModalState.selectedDates.has(ds);
     const hasShift=getStaffShiftForDate(empId, ds, ym);
     const hasReq=reqs.find(r=>r.date===ds&&r.status==='pending');
-    const we=isWe(d);
+    const kind=getDayKind(d); // ver.7.6.0 No.3
     const btn=document.createElement('button');
     let cls='multi-date-btn';
-    if(we) cls+=' weekend';
+    if(kind==='hol'||kind==='sun') cls+=' weekend'; else if(kind==='sat') cls+=' saturday';
+    const isClosed=isFacilityClosedDay(closedFid, d);
+    if(isClosed) cls+=' is-closed';
+    const dlk=getRequestLock(reqFid, ds); // ver.8.1.0 No.15
+    if(dlk.locked && !hasShift){ cls+=' dl-locked'; btn.disabled=true; AppState.staffModalState.selectedDates.delete(ds); }
     if(hasShift){cls+=' disabled';btn.disabled=true;}
     else if(hasReq) cls+=' has-entry';
-    if(isSelected&&!hasShift) cls+=' selected';
+    if(isSelected&&!hasShift&&!dlk.locked) cls+=' selected';
     btn.className=cls;
     btn.textContent=`${d.getDate()}`;
-    btn.title=`${d.getMonth()+1}/${d.getDate()}（${getDow(d)}）`;
-    if(!hasShift){
+    const dowEl=document.createElement('span'); dowEl.className='md-dow'; dowEl.textContent=getDow(d); // ver.7.5.3 No.2
+    btn.appendChild(dowEl);
+    btn.title=`${d.getMonth()+1}/${d.getDate()}（${getDow(d)}）${JpHoliday.name(d)?' '+JpHoliday.name(d):''}${isClosed?' 定休日':''}${dlk.locked?' 受付終了':(dlk.reopened?' 追加募集':'')}`;
+    if(!hasShift && !dlk.locked){
       btn.onclick=()=>{
         if(AppState.staffModalState.selectedDates.has(ds)) AppState.staffModalState.selectedDates.delete(ds);
         else AppState.staffModalState.selectedDates.add(ds);
@@ -4846,31 +6416,44 @@ async function saveStaffMultiEntry() {
   const facilityId = (facWrap.style.display!=='none' ? document.getElementById('staff-entry-facility').value : emp?.facilityId) || '';
   if(!selectedDates.size){showNotif('日付を選択してください','error');return;}
   if(!isAnnual&&start>=end){showNotif('開始時刻は終了時刻より前にしてください','error');return;}
+  // ver.8.1.0 No.15: 締め切り済みの日は保存しない（最終判定はサーバー側）
+  const lockedDates=[...selectedDates].filter(d=>getRequestLock(facilityId, d).locked);
+  const targetDates=[...selectedDates].filter(d=>!lockedDates.includes(d));
+  if(!targetDates.length){ showNotif('選んだ日はすべて申請の受付が終了しています','error'); return; }
 
   showLoading('保存中...');
   try {
     let count=0;
     const errDates=[];
-    for(const date of selectedDates){
+    const deadlineDates=[...lockedDates];
+    const nowIso=new Date().toISOString();
+    for(const date of targetDates){
       // バグ修正: 従来はstatus==='pending'のレコードのみを「既存」とみなしていたため、
       // 管理者が確定/非採用（月次確定など）に処理した後で同じ日に再申請すると、
       // 既存行を更新せず新規行を追加しようとして重複データや保存失敗（ループの途中停止）を招いていた。
       // status に関わらず「その従業員・その日付」の既存レコードを1件に統一して上書きするよう修正。
       const existing=AppState.staffRequests.find(r=>r.empId===u.id&&r.date===date);
       // 再申請なので、月次確定による自動処理フラグ(auto_closed_at)も解除し、通常の「申請中」に戻す
-      const payload={emp_id:u.id,facility_id:facilityId,date,ym,start_time:start,end_time:end,is_annual:isAnnual,status:'pending',auto_closed_at:null};
+      const payload={emp_id:u.id,facility_id:facilityId,date,ym,start_time:start,end_time:end,is_annual:isAnnual,status:'pending',auto_closed_at:null,
+        submitted_at:nowIso}; // ver.8.1.0: 申請日時（締め切り判定でスタッフの申請と管理者の処理を区別する）
+      const send = async (p) => existing?.id ? DB.patch('shift_requests', p, `?id=eq.${existing.id}`) : DB.post('shift_requests', p);
       try {
+        let rows;
+        try { rows = await send(payload); }
+        catch(colErr) {
+          if(!/submitted_at/i.test(colErr.message||'')) throw colErr;
+          const p2={...payload}; delete p2.submitted_at; rows = await send(p2); // 列が未追加の環境
+        }
         if(existing?.id) {
-          await DB.patch('shift_requests', payload, `?id=eq.${existing.id}`);
           Object.assign(existing, {start,end,isAnnual,facilityId,status:'pending',autoClosedAt:null});
         } else {
-          const rows=await DB.post('shift_requests', payload);
           const newRow=Array.isArray(rows)?rows[0]:rows;
           AppState.staffRequests.push({id:newRow?.id,empId:u.id,facilityId,date,ym,start,end,isAnnual,status:'pending',autoClosedAt:null});
         }
         count++;
       } catch(rowErr) {
         // バグ修正: 1件の失敗でループ全体を止めず、失敗した日付だけをスキップして残りを保存し続ける
+        if(isDeadlineErr(rowErr)){ deadlineDates.push(date); continue; } // ver.8.1.0: サーバー側で締め切り判定
         errDates.push(date);
         Security.log('STAFF_SAVE_ROW_ERR', `${date}: ${rowErr.message}`, 'ERROR');
       }
@@ -4878,7 +6461,9 @@ async function saveStaffMultiEntry() {
     Security.log('STAFF_SAVE',`${u.id} ${ym} ${count}件 失敗:${errDates.length}件`);
     closeStaffEntryModal();
     renderStaffCalendar();
-    if(errDates.length){
+    if(deadlineDates.length){
+      showNotif(`${count}日分を保存しました（${deadlineDates.map(fmtMdDow).join('、')} は申請の受付が終了しているため保存できませんでした）`,'error');
+    } else if(errDates.length){
       showNotif(`${count}日分を保存しました（${errDates.join('、')} の保存に失敗しました。お手数ですが再度お試しください）`,'error');
     } else {
       showNotif(`${count}日分のシフト希望を保存しました`,'success');
@@ -4928,6 +6513,33 @@ window.addEventListener('load', async ()=>{
   }
   // 追加修正: RLS有効化に伴い、facilities/employees等はログイン（＝有効なセッショントークンの取得）後にのみ
   // 取得できる。ここではログイン画面を表示するだけで、データ読み込みはdoLogin/doAdminLogin側で行う。
+  // ver.7.5.3 No.1: 同じタブ内で有効なログイン状態が残っていれば復元する（画面更新でログアウトしない）
+  const saved = SessionStore.load();
+  if(saved){
+    AppState.sessionToken = saved.token;
+    AppState.currentUser = saved.user;
+    try {
+      await loadAllData();
+      await initApp();
+      const navId = saved.user.role==='admin' ? 'admin-nav' : 'staff-nav';
+      if(saved.tab && document.getElementById('tab-'+saved.tab)
+         && document.querySelector(`#${navId} .nav-item[onclick="showTab('${saved.tab}')"]`)){
+        showTab(saved.tab);
+      }
+      Security.log('SESSION_RESTORE', saved.user.id);
+      return;
+    } catch(err) {
+      SessionStore.clear();
+      AppState.sessionToken = null;
+      AppState.currentUser = null;
+      Security.log('SESSION_RESTORE_FAIL', err.message, 'WARN');
+      hideLoading();
+      document.getElementById('login-screen').style.display='flex';
+      const msg=document.getElementById('login-attempt-msg');
+      if(msg){ msg.textContent='ログインの有効期限が切れました。もう一度ログインしてください'; msg.style.display='block'; }
+      return;
+    }
+  }
   hideLoading();
   document.getElementById('login-screen').style.display='flex';
 });
