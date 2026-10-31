@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co;">
-<title>シフト管理システム ver.8.6.1</title>
+<title>シフト管理システム ver.8.6.2</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -643,7 +643,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
         </svg>
       </div>
       <h1>シフト管理システム</h1>
-      <p>Shift Management System ver.8.6.1</p>
+      <p>Shift Management System ver.8.6.2</p>
     </div>
     <div class="form-group">
       <label>従業員番号</label>
@@ -1157,6 +1157,30 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
 </div>
 
 <!-- 施設編集 -->
+<!-- ver.8.6.2: 施設の完全削除（最終手段） -->
+<div class="modal-overlay" id="modal-purge-facility">
+  <div class="modal" style="width:520px">
+    <div class="modal-header"><h3>施設を完全に削除</h3><button class="modal-close" onclick="closeModal('modal-purge-facility')">✕</button></div>
+    <div class="modal-body">
+      <div class="purge-warn">
+        <b>⚠ この操作は元に戻せません。</b><br>
+        施設「<span id="pf-name"></span>」と、この施設のシフト・申請・業務の記録をすべて削除します。<br>
+        削除すると、<b>集計・勤務表・Excel出力（給与計算の資料）からもこの施設の記録が消えます。</b>
+        テスト用の施設など、記録を残す必要がない場合だけ使ってください。
+      </div>
+      <div id="pf-block" class="purge-warn" style="display:none;border-color:#f59e0b;background:#fffbeb;color:#78350f"></div>
+      <div class="purge-counts" id="pf-counts"><span>削除されるデータを確認中...</span><span></span></div>
+      <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:6px">確認のため、施設名 <b id="pf-name-hint"></b> を入力してください</label>
+      <input type="text" id="pf-confirm-name" style="width:100%" maxlength="64" autocomplete="off" oninput="syncPurgeFacilityButton()">
+      <label class="check-wrap" style="margin-top:10px;font-size:13px"><input type="checkbox" id="pf-confirm-check" onchange="syncPurgeFacilityButton()"> 記録がすべて消え、元に戻せないことを理解しました</label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-purge-facility')">キャンセル</button>
+      <button class="btn btn-danger" id="pf-exec-btn" disabled onclick="executePurgeFacility()">完全に削除する</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-edit-facility">
   <div class="modal" style="width:400px">
     <div class="modal-header"><h3>施設の編集</h3><button class="modal-close" onclick="closeModal('modal-edit-facility')">✕</button></div>
@@ -1623,7 +1647,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
    以下の2行を自分のプロジェクトの値に書き換えてください
 ================================================================ */
 // アプリのバージョン（大規模改修: x.0.0 / 中規模: 0.x.0 / 小規模: 0.0.x）
-const APP_VERSION = '8.6.1';
+const APP_VERSION = '8.6.2';
 const SUPABASE_URL = 'https://iehxxwhzzwlhqwxqgdph.supabase.co';           // 例: https://xxxxxxxxxx.supabase.co
 const SUPABASE_KEY = 'sb_publishable_frYDQgYp34Gqw90YoleZzg_DeaoWOEb';       // 例: sb_publishable_xxxxxxxxxxxx
 // 追加修正: RLS有効化に伴い、テーブルへは直接アクセスせず、必ずEdge Function（プロキシ）を経由する。
@@ -3364,8 +3388,8 @@ function renderFacilityTable() {
     const closedTxt = (f.closedWeekdays||[]).length ? `<div style="font-size:11px;color:var(--text-muted);font-weight:400">定休: ${closedWeekdaysLabel(f.closedWeekdays)}</div>` : ''; // ver.7.7.0 No.4
     const nameCell = (f.deletedAt ? `${Security.escapeHtml(f.name)} <span class="badge badge-gray" style="font-size:9px">無効化済み</span>` : Security.escapeHtml(f.name)) + closedTxt;
     const actionsCell = f.deletedAt
-      ? `<button class="btn btn-outline btn-sm" onclick="restoreFacility('${Security.escapeHtml(f.id)}')">復元</button>`
-      : `<button class="btn btn-outline btn-sm" onclick="openEditFacilityModal('${Security.escapeHtml(f.id)}')">編集</button> <button class="btn btn-outline btn-sm" onclick="openFacilityActivitiesModal('${Security.escapeHtml(f.id)}')">個別項目</button> <button class="btn btn-outline btn-sm" onclick="deleteFacility('${Security.escapeHtml(f.id)}')">削除</button>`;
+      ? `<button class="btn btn-outline btn-sm" onclick="restoreFacility('${Security.escapeHtml(f.id)}')">復元</button> <button class="btn btn-danger-outline btn-sm" onclick="openPurgeFacilityModal('${Security.escapeHtml(f.id)}')" title="データベースから完全に削除します（元に戻せません）">完全に削除</button>`
+      : `<button class="btn btn-outline btn-sm" onclick="openEditFacilityModal('${Security.escapeHtml(f.id)}')">編集</button> <button class="btn btn-outline btn-sm" onclick="openFacilityActivitiesModal('${Security.escapeHtml(f.id)}')">個別項目</button> <button class="btn btn-outline btn-sm" onclick="deleteFacility('${Security.escapeHtml(f.id)}')" title="一覧・タブから非表示にします（記録は残ります）">無効化</button>`;
     tr.innerHTML = `<td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)">${i+1}</td>
       <td style="font-weight:500">${nameCell}</td>
       <td style="color:var(--text-secondary)">${f.createdAt}</td>
@@ -4286,6 +4310,106 @@ async function executePurgeEmployee() {
     const msg = err.message==='EMPLOYEE_NOT_DELETED'
       ? '従業員情報を削除できませんでした（データベースの権限設定を確認してください）。シフト・申請の記録は削除済みです'
       : `削除の途中で失敗しました（削除済み：${done.length?done.map(x=>PURGE_TABLES.find(p=>p.table===x)?.label).join('、'):'なし'}）。もう一度お試しください`;
+    showNotif(msg,'error');
+  } finally { hideLoading(); }
+}
+
+/* ================================================================
+   ver.8.6.2 施設の完全削除（最終手段）
+   - 対象は「無効化」済みの施設だけ
+   - この施設を「所属施設」にしている従業員がいる間は削除できない（従業員の所属が宙に浮くのを防ぐ）
+     → 先に所属を変えるか、テスト用の従業員なら完全削除する
+   - 削除順：業務の記録 → シフト → 申請 → 兼務設定 → 個別項目（職種）の登録 → 施設本体
+================================================================ */
+const PURGE_FAC_TABLES = [
+  { table:'shift_activities', label:'個別項目（業務）の記録' },
+  { table:'shifts', label:'シフト（年休・空き番を含む）' },
+  { table:'shift_requests', label:'シフト・年休の申請（ゴミ箱を含む）' },
+  { table:'employee_facilities', label:'兼務施設の設定' },
+  { table:'facility_activities', label:'個別項目・職種の登録' },
+];
+async function openPurgeFacilityModal(id) {
+  if(!Auth.requireAdmin()) return;
+  id=Security.sanitizeStr(id, 64);
+  const f=AppState.facilities.find(x=>x.id===id);
+  if(!f){ showNotif('施設が見つかりません','error'); return; }
+  if(!f.deletedAt){ showNotif('完全に削除できるのは「無効化」済みの施設だけです。先に無効化してください','error'); return; }
+  const members=AppState.employees.filter(e=>e.facilityId===id);
+  AppState.purgeFacility={ id, name:f.name, counts:null, blocked: members.length>0 };
+  document.getElementById('pf-name').textContent=f.name;
+  document.getElementById('pf-name-hint').textContent=f.name;
+  document.getElementById('pf-confirm-name').value='';
+  document.getElementById('pf-confirm-check').checked=false;
+  const blk=document.getElementById('pf-block');
+  if(members.length){
+    blk.style.display='';
+    blk.innerHTML=`<b>この施設を所属施設にしている従業員が${members.length}名いるため、削除できません。</b><br>`
+      + members.slice(0,10).map(e=>`${Security.escapeHtml(e.name)}（${Security.escapeHtml(e.id)}${e.deletedAt?'・無効化済み':''}）`).join('、')
+      + (members.length>10?` ほか${members.length-10}名`:'')
+      + '<br>従業員マスタで所属施設を変更するか、テスト用の従業員なら先に完全削除してください。';
+  } else { blk.style.display='none'; blk.innerHTML=''; }
+  document.getElementById('pf-counts').innerHTML='<span>削除されるデータを確認中...</span><span></span>';
+  syncPurgeFacilityButton();
+  openModal('modal-purge-facility');
+  const counts={};
+  const q=`?facility_id=eq.${encodeURIComponent(id)}&select=id`;
+  await Promise.all(PURGE_FAC_TABLES.map(async t=>{
+    try { counts[t.table]=(await DB.get(t.table, t.table==='employee_facilities' ? `?facility_id=eq.${encodeURIComponent(id)}&select=emp_id` : q)).length; }
+    catch(err) { counts[t.table] = isMissingTableErr(err) ? 0 : null; }
+  }));
+  let actual=0;
+  try { actual=(await DB.get('shifts', `?facility_id=eq.${encodeURIComponent(id)}&actual_confirmed=eq.true&select=id`)).length; } catch(_) { actual=0; }
+  if(AppState.purgeFacility?.id!==id) return;
+  AppState.purgeFacility.counts=counts;
+  const esc=Security.escapeHtml;
+  document.getElementById('pf-counts').innerHTML =
+    PURGE_FAC_TABLES.map(t=>`<span>${esc(t.label)}</span><span>${counts[t.table]==null?'確認できません':counts[t.table]+'件'}</span>`).join('')
+    + `<span>施設の情報（締め切り・必要人数・並び順を含む）</span><span>1件</span>`
+    + (actual ? `<span style="color:#b91c1c;font-weight:700">うち勤務実績を確定済みのシフト</span><span style="color:#b91c1c">${actual}件</span>` : '');
+  syncPurgeFacilityButton();
+}
+function syncPurgeFacilityButton() {
+  const t=AppState.purgeFacility;
+  const ok = !!t && !t.blocked && !!t.counts && !Object.values(t.counts).some(v=>v==null)
+    && document.getElementById('pf-confirm-name').value.trim()===t.name
+    && document.getElementById('pf-confirm-check').checked;
+  document.getElementById('pf-exec-btn').disabled=!ok;
+}
+async function executePurgeFacility() {
+  if(!Auth.requireAdmin()) return;
+  const t=AppState.purgeFacility; if(!t) return;
+  const f=AppState.facilities.find(x=>x.id===t.id);
+  if(!f || !f.deletedAt || AppState.employees.some(e=>e.facilityId===t.id)){ showNotif('この施設は削除できません','error'); return; }
+  if(document.getElementById('pf-confirm-name').value.trim()!==t.name || !document.getElementById('pf-confirm-check').checked) return;
+  if(!confirm(`施設「${f.name}」を完全に削除します。よろしいですか？\nこの施設のシフト・申請の記録もすべて消え、元に戻せません。`)) return;
+  const q=`?facility_id=eq.${encodeURIComponent(t.id)}`;
+  showLoading('削除中...');
+  const done=[];
+  try {
+    for(const tb of PURGE_FAC_TABLES){
+      try { await DB.del(tb.table, q); done.push(tb.table); }
+      catch(err) { if(!isMissingTableErr(err)) throw err; }
+    }
+    await DB.del('facilities', `?id=eq.${encodeURIComponent(t.id)}`);
+    const left=await DB.get('facilities', `?id=eq.${encodeURIComponent(t.id)}&select=id`);
+    if(left.length) throw new Error('FACILITY_NOT_DELETED');
+    Security.log('FAC_PURGE', `${t.id} ${f.name} ${JSON.stringify(t.counts)}`, 'WARN');
+    AppState.facilities=AppState.facilities.filter(x=>x.id!==t.id);
+    AppState.facilityActivities=(AppState.facilityActivities||[]).filter(a=>a.facilityId!==t.id);
+    if(AppState.shifts) delete AppState.shifts[t.id];
+    if(AppState.shiftActivities) delete AppState.shiftActivities[t.id];
+    AppState.staffRequests=(AppState.staffRequests||[]).filter(r=>r.facilityId!==t.id);
+    Object.keys(AppState.employeeFacilities||{}).forEach(k=>{ AppState.employeeFacilities[k]=AppState.employeeFacilities[k].filter(x=>x!==t.id); });
+    if(AppState.currentFacilityId===t.id) AppState.currentFacilityId=AppState.facilities.find(x=>!x.deletedAt)?.id||null;
+    AppState.purgeFacility=null;
+    closeModal('modal-purge-facility');
+    renderFacilityTabs(); renderFacilityTable(); updateFacilityDropdowns(); renderEmployeeTable();
+    showNotif(`施設「${f.name}」を完全に削除しました`,'success');
+  } catch(err) {
+    Security.log('FAC_PURGE_ERR', `${t.id} done:${done.join(',')} ${err.message}`, 'ERROR');
+    const msg = err.message==='FACILITY_NOT_DELETED'
+      ? '施設の情報を削除できませんでした（データベースの権限設定を確認してください）。シフト・申請の記録は削除済みです'
+      : `削除の途中で失敗しました（削除済み：${done.length?done.map(x=>PURGE_FAC_TABLES.find(p=>p.table===x)?.label).join('、'):'なし'}）。もう一度お試しください`;
     showNotif(msg,'error');
   } finally { hideLoading(); }
 }
