@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co;">
-<title>シフト管理システム ver.8.6.3</title>
+<title>シフト管理システム ver.8.6.4</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -496,6 +496,16 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
 #print-area .dlt td.p-bar-act{background:#2563eb}
 .dlt td .act-lbl{position:absolute;left:2px;top:50%;transform:translateY(-50%);z-index:1;font-size:10px;line-height:1;color:#fff;font-weight:700;white-space:nowrap;pointer-events:none;text-shadow:0 0 2px rgba(0,0,0,.35)}
 #print-area .dlt td .act-lbl{font-size:6.5pt}
+/* ver.8.6.4: 業務の始まり〜終わりを1本の帯で表示（|業務名 ───→|） */
+.dlt td .act-span{position:absolute;left:0;top:2px;bottom:2px;z-index:1;display:flex;align-items:center;gap:3px;padding:0 3px 0 4px;border-left:3px solid #1e3a8a;border-radius:2px;color:#fff;font-size:10px;font-weight:700;line-height:1.15;overflow:hidden;pointer-events:none;box-sizing:border-box}
+.dlt td.act-start,#print-area .dlt td.act-start{overflow:visible}
+#print-area .dlt td.dlt-name{white-space:normal;text-align:left;overflow-wrap:anywhere}
+/* 業務名は帯の幅に収まらないときは折り返して、表示できるところまで出す */
+.dlt td .act-span .an{flex:0 1 auto;min-width:0;max-height:100%;overflow:hidden;white-space:normal;word-break:break-all;overflow-wrap:anywhere;text-shadow:0 0 2px rgba(0,0,0,.35)}
+.dlt td .act-span .al{flex:1 1 auto;min-width:4px;border-top:1.5px solid rgba(255,255,255,.9)}
+.dlt td .act-span .ae{flex:none;font-size:9px;letter-spacing:-1px}
+#print-area .dlt td .act-span{font-size:6.5pt;top:1px;bottom:1px;border-left-width:2px}
+#print-area .dlt td .act-span .ae{font-size:6pt}
 /* ver.8.5.0 17: 日別一覧の絞り込み */
 .dl-filter{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 8px;font-size:12px}
 .dl-filter select{font-size:12px;padding:4px 8px}
@@ -643,7 +653,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
         </svg>
       </div>
       <h1>シフト管理システム</h1>
-      <p>Shift Management System ver.8.6.3</p>
+      <p>Shift Management System ver.8.6.4</p>
     </div>
     <div class="form-group">
       <label>従業員番号</label>
@@ -1648,7 +1658,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
    以下の2行を自分のプロジェクトの値に書き換えてください
 ================================================================ */
 // アプリのバージョン（大規模改修: x.0.0 / 中規模: 0.x.0 / 小規模: 0.0.x）
-const APP_VERSION = '8.6.3';
+const APP_VERSION = '8.6.4';
 const SUPABASE_URL = 'https://iehxxwhzzwlhqwxqgdph.supabase.co';           // 例: https://xxxxxxxxxx.supabase.co
 const SUPABASE_KEY = 'sb_publishable_frYDQgYp34Gqw90YoleZzg_DeaoWOEb';       // 例: sb_publishable_xxxxxxxxxxxx
 // 追加修正: RLS有効化に伴い、テーブルへは直接アクセスせず、必ずEdge Function（プロキシ）を経由する。
@@ -5358,7 +5368,16 @@ function dayListTableHtml(model, opts) {
           const act=(x.acts||[]).find(v=>a>=v.start && a<v.end);
           cls+= inB ? ' p-bar-break' : (act ? ' p-bar-act' : (x.kind==='draft' ? ' p-bar-draft' : ' p-bar'));
           // ver.8.5.0 16: 業務の始まりのコマに業務名を出す
-          if(act && !inB && (si===0 || !(mStr(t-30)>=act.start && mStr(t-30)<act.end) || inShiftBreak(s, mStr(t-30), a))) lbl=`<span class="act-lbl">${Security.escapeHtml(actName(act))}</span>`;
+          if(act && !inB && (si===0 || !(mStr(t-30)>=act.start && mStr(t-30)<act.end) || inShiftBreak(s, mStr(t-30), a))){
+            // ver.8.6.4: 業務が続くコマ数を数え、始まりのコマから終わりまで1本の帯で表示（|業務名 ───→|）
+            let n=0;
+            for(let j=si; j<slots.length; j++){
+              const aj=mStr(slots[j]), bj=mStr(slots[j]+30);
+              if(aj>=act.start && aj<act.end && aj<s.end && !inShiftBreak(s, aj, bj)) n++; else break;
+            }
+            cls+=' act-start';
+            lbl=`<span class="act-span" style="width:calc(${n*100}% + ${n-1}px)"><span class="an">${Security.escapeHtml(actName(act))}</span>${n>1?'<span class="al"></span><span class="ae">→|</span>':''}</span>`; // 1コマだけの業務は名前を優先（終わりは色の切れ目で分かる）
+          }
           else if(inB && (si===0 || !inShiftBreak(s, mStr(t-30), a))) lbl='<span class="act-lbl" style="color:#065f46;text-shadow:none">休</span>';
         } else if(x.kind==='off' && r && !r.isAnnual && a>=r.start && a<r.end) cls+=' p-bar-off';
         else if(x.kind==='req' && a>=r.start && a<r.end) cls+=' p-bar-req';
