@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co;">
-<title>シフト管理システム ver.8.6.2</title>
+<title>シフト管理システム ver.8.6.3</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -643,7 +643,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
         </svg>
       </div>
       <h1>シフト管理システム</h1>
-      <p>Shift Management System ver.8.6.2</p>
+      <p>Shift Management System ver.8.6.3</p>
     </div>
     <div class="form-group">
       <label>従業員番号</label>
@@ -1194,6 +1194,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
       <!-- ver.8.3.0 ②: 日にち別一覧で不足を判定するための設定 -->
       <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin:14px 0 6px">必要人数（同時に勤務が必要な人数・任意）</label>
       <input type="number" id="edit-facility-required" min="1" max="99" step="1" placeholder="例：4" style="width:120px">
+      <label class="check-wrap" style="margin-top:8px;font-size:13px"><input type="checkbox" id="edit-facility-staffing-on" checked> 人数不足を判定する（繁忙期・閑散期に合わせてオン・オフできます）</label>
       <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin:12px 0 6px">営業時間（任意・不足を判定する時間帯）</label>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><select id="edit-facility-open" style="width:110px"></select>〜<select id="edit-facility-close" style="width:110px"></select></div>
       <p style="font-size:11px;color:var(--text-muted);margin-top:6px">営業時間を空欄にすると、各日の最初の勤務開始〜最後の勤務終了の間で判定します。</p>
@@ -1647,7 +1648,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
    以下の2行を自分のプロジェクトの値に書き換えてください
 ================================================================ */
 // アプリのバージョン（大規模改修: x.0.0 / 中規模: 0.x.0 / 小規模: 0.0.x）
-const APP_VERSION = '8.6.2';
+const APP_VERSION = '8.6.3';
 const SUPABASE_URL = 'https://iehxxwhzzwlhqwxqgdph.supabase.co';           // 例: https://xxxxxxxxxx.supabase.co
 const SUPABASE_KEY = 'sb_publishable_frYDQgYp34Gqw90YoleZzg_DeaoWOEb';       // 例: sb_publishable_xxxxxxxxxxxx
 // 追加修正: RLS有効化に伴い、テーブルへは直接アクセスせず、必ずEdge Function（プロキシ）を経由する。
@@ -3425,6 +3426,7 @@ function openEditFacilityModal(id) {
   // ver.8.3.0 ②: 必要人数・営業時間
   const st=f.staffing||{};
   document.getElementById('edit-facility-required').value = st.required || '';
+  document.getElementById('edit-facility-staffing-on').checked = st.enabled!==false; // ver.8.6.3
   const topt=(v)=>'<option value="">--:--</option>'+TIMES.map(t=>`<option value="${t}"${t===v?' selected':''}>${t}</option>`).join('');
   document.getElementById('edit-facility-open').innerHTML = topt(st.open||'');
   document.getElementById('edit-facility-close').innerHTML = topt(st.close||'');
@@ -3442,7 +3444,8 @@ async function saveFacilityEdit() {
   const openV = document.getElementById('edit-facility-open').value, closeV = document.getElementById('edit-facility-close').value;
   if((openV||closeV) && !(openV && closeV && openV<closeV)){ document.getElementById('edit-facility-name-error').textContent='営業時間は開始と終了の両方を、開始＜終了で選んでください'; document.getElementById('edit-facility-name-error').style.display='block'; return; }
   document.getElementById('edit-facility-name-error').textContent='施設名を入力してください';
-  const staffing = { required: reqRaw==='' ? null : Security.sanitizeNum(reqRaw,1,99), open: openV||null, close: closeV||null };
+  const staffing = { required: reqRaw==='' ? null : Security.sanitizeNum(reqRaw,1,99), open: openV||null, close: closeV||null,
+    enabled: !!document.getElementById('edit-facility-staffing-on').checked }; // ver.8.6.3
   showLoading('保存中...');
   try {
     let closedSaved = true;
@@ -5191,9 +5194,33 @@ function parseStaffing(v) {
   const t=x=>(typeof x==='string' && /^\d{2}:\d{2}$/.test(x)) ? x : null;
   const r=parseInt(o.required,10);
   const open=t(o.open), close=t(o.close);
-  return { required: (r>=1 && r<=99) ? r : null, open: (open&&close&&open<close)?open:null, close: (open&&close&&open<close)?close:null };
+  return { required: (r>=1 && r<=99) ? r : null, open: (open&&close&&open<close)?open:null, close: (open&&close&&open<close)?close:null,
+    enabled: o.enabled!==false }; // ver.8.6.3: 人数不足の判定のオン・オフ（未設定＝オン）
 }
-function getFacilityStaffing(fid) { return AppState.facilities.find(f=>f.id===fid)?.staffing || { required:null, open:null, close:null }; }
+// 判定に使う設定。オフのときは必要人数を「なし」として扱い、赤枠・募集表示・不足の判定をすべて止める
+function getFacilityStaffing(fid) {
+  const st=AppState.facilities.find(f=>f.id===fid)?.staffing || { required:null, open:null, close:null, enabled:true };
+  if(st.required && st.enabled===false) return { ...st, required:null, off:true, setRequired:st.required };
+  return { ...st, off:false };
+}
+// ver.8.6.3: 繁忙期・閑散期に合わせて、人数不足の判定をオン・オフする
+async function toggleStaffingCheck(fid, on) {
+  if(!Auth.requireAdmin()) return;
+  const f=AppState.facilities.find(x=>x.id===fid); if(!f) return;
+  const st=f.staffing||{};
+  const val={ required: st.required||null, open: st.open||null, close: st.close||null, enabled: !!on };
+  showLoading('保存中...');
+  try {
+    await DB.patch('facilities', {staffing_rule: val}, `?id=eq.${encodeURIComponent(fid)}`);
+    f.staffing=parseStaffing(val);
+    Security.log('STAFFING_TOGGLE', `${fid} ${on?'on':'off'}`);
+    renderShiftView();
+    showNotif(on ? '人数不足の判定をオンにしました（スタッフ画面の募集表示も再開します）' : '人数不足の判定をオフにしました（赤枠・スタッフ画面の募集表示も止まります）','success');
+  } catch(err) {
+    Security.log('STAFFING_TOGGLE_ERR', err.message, 'ERROR');
+    showNotif(isMissingColumnErr(err, ['staffing_rule']) ? '必要人数を保存する列がDBに未追加です。SupabaseでSQL（ver.8.3.0）を実行してください' : '保存に失敗しました','error');
+  } finally { hideLoading(); }
+}
 const tMin = t => { const [h,m]=String(t||'0:0').split(':').map(Number); return h*60+m; };
 // ver.8.6.0 ④: 休憩の時間帯の配列を検証して整える（HH:MM、開始＜終了、重なりは結合、最大12回）
 function parseBreaks(v) {
@@ -5351,6 +5378,10 @@ function dayListTableHtml(model, opts) {
 
 function dayListSummaryHtml(model, fid, screen) {
   const { rule } = model;
+  if(rule.off){ // ver.8.6.3
+    return `<div class="daylist-summary"><span>人数不足の判定：<b>オフ</b>（必要人数 ${rule.setRequired}人。赤枠・スタッフへの募集表示は止まっています）</span>`
+      + (screen?`<button type="button" class="btn btn-outline btn-sm" onclick="toggleStaffingCheck('${Security.escapeHtml(fid)}', true)">判定をオンにする</button>`:'') + '</div>';
+  }
   if(!rule.required){
     return `<div class="daylist-summary"><span>必要人数が未設定のため、不足の判定は行っていません。</span>`
       + (screen?`<button type="button" class="btn btn-outline btn-sm" onclick="openEditFacilityModal('${Security.escapeHtml(fid)}')">必要人数を設定</button>`:'') + '</div>';
@@ -5359,7 +5390,7 @@ function dayListSummaryHtml(model, fid, screen) {
   const hours = rule.open ? `営業時間 ${rule.open}〜${rule.close}` : '各日の最初の勤務開始〜最後の勤務終了';
   return `<div class="daylist-summary"><span>必要人数 <b>${rule.required}人</b>（判定する時間帯：${hours}）</span>`
     + (shortDays.length ? `<span class="ds-short">人手が足りない日：${shortDays.length}日（${shortDays.map(dm=>`${dm.d.getMonth()+1}/${dm.d.getDate()}`).join('、')}）</span>` : '<span class="ds-ok">すべての日で必要人数を満たしています</span>')
-    + (screen?`<button type="button" class="btn btn-outline btn-sm" onclick="openEditFacilityModal('${Security.escapeHtml(fid)}')">必要人数・営業時間を変更</button>`:'') + '</div>';
+    + (screen?`<button type="button" class="btn btn-outline btn-sm" onclick="openEditFacilityModal('${Security.escapeHtml(fid)}')">必要人数・営業時間を変更</button> <button type="button" class="btn btn-outline btn-sm" onclick="toggleStaffingCheck('${Security.escapeHtml(fid)}', false)" title="繁忙期・閑散期などで判定が不要なときに止めます">判定をオフにする</button>`:'') + '</div>';
 }
 
 /* ================================================================
