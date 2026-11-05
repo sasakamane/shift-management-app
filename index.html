@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co;">
-<title>シフト管理システム ver.8.6.5</title>
+<title>シフト管理システム ver.8.7.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -444,6 +444,21 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
   .dlt th.dlt-name,.dlt td.dlt-name{width:84px}
   .dlt{min-width:0}
 }
+/* ver.8.7.0 ①: シフト表で名前をドラッグして並べ替え */
+.drag-h{font-style:normal;display:inline-flex;align-items:center;justify-content:center;min-width:12px;white-space:nowrap;word-break:keep-all;vertical-align:middle;margin-right:3px;color:var(--text-muted);cursor:grab;touch-action:none;user-select:none;font-size:11px;letter-spacing:-2px;flex-shrink:0;opacity:.55}
+.drag-h::before{content:'⋮⋮'}
+.drag-h:hover{opacity:1;color:var(--accent)}
+body.row-dragging,body.row-dragging *{cursor:grabbing!important;user-select:none}
+tr.row-drag-src td{opacity:.45}
+tr.drop-before td{box-shadow:inset 0 3px 0 var(--accent)}
+tr.drop-after td{box-shadow:inset 0 -3px 0 var(--accent)}
+tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
+/* ver.8.7.0 ③: 複数の時間帯をまとめて選ぶ */
+#cell-multi-bar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:900;display:none;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;padding:10px 14px;background:var(--primary);color:#fff;border-radius:999px;box-shadow:var(--shadow-lg);font-size:13px;max-width:calc(100vw - 24px)}
+#cell-multi-bar .btn{padding:6px 14px}
+#cell-multi-bar .btn-outline{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.multi-sel-btn{border:1px solid var(--border);background:#fff;border-radius:999px;padding:2px 10px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text-secondary);margin-left:6px}
+.multi-sel-btn.on{background:#fde68a;border-color:#f59e0b;color:#78350f;font-weight:700}
 /* ver.8.6.1: 従業員の完全削除（最終手段） */
 .btn-danger-outline{background:#fff;color:var(--danger);border:1px solid #fca5a5}
 .btn-danger-outline:hover{background:#fef2f2}
@@ -653,7 +668,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
         </svg>
       </div>
       <h1>シフト管理システム</h1>
-      <p>Shift Management System ver.8.6.5</p>
+      <p>Shift Management System ver.8.7.0</p>
     </div>
     <div class="form-group">
       <label>従業員番号</label>
@@ -748,6 +763,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
             <label for="shift-job-filter" style="font-size:12px;color:var(--text-secondary)">職種</label>
             <details class="multi-dd" id="shift-job-filter"><summary id="shift-job-summary">すべて</summary><div class="multi-dd-panel" id="shift-job-panel"></div></details>
             <label class="check-wrap" id="shift-job-group-wrap" style="font-size:12px"><input type="checkbox" id="shift-job-group" checked onchange="setAdminJobGroup(this.checked)"> 職種で分ける</label>
+            <label class="check-wrap" id="shift-sort-start-wrap" style="font-size:12px;display:none" title="その日の勤務が早い人から順に並べます（日表示・日別一覧）"><input type="checkbox" id="shift-sort-start" onchange="setSortByStart(this.checked)"> 開始時刻順</label>
             <button type="button" class="btn btn-outline btn-sm" id="shift-job-settings-btn" onclick="openFacilityActivitiesModal(AppState.currentFacilityId)" title="この施設の職種（個別項目）と、誰がどの職種かを設定します">職種の設定</button>
             <button type="button" class="btn btn-outline btn-sm" onclick="openStaffOrderModal()" title="この施設の責任者（★）と、シフト表に並べる順番を設定します">★ 並び順・責任者</button>
           </div>
@@ -1429,7 +1445,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
       <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px">
         <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">前年度実績（直近の付与判定に使用）</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-          <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">週所定労働日数</label><input type="number" id="lp-prev-weekly-days" min="1" max="5" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">週所定労働日数</label><input type="number" id="lp-prev-weekly-days" min="0" max="7" style="width:100%"></div>
           <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">年間所定労働日数</label><input type="number" id="lp-prev-annual-days" min="0" max="366" style="width:100%"></div>
           <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">週所定労働時間</label><input type="number" id="lp-prev-weekly-hours" min="0" max="80" step="0.5" style="width:100%"></div>
         </div>
@@ -1438,7 +1454,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
       <div style="border-top:1px solid var(--border);padding-top:14px">
         <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">前々年度実績（前年度が未入力の場合のフォールバック）</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-          <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">週所定労働日数</label><input type="number" id="lp-prev2-weekly-days" min="1" max="5" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">週所定労働日数</label><input type="number" id="lp-prev2-weekly-days" min="0" max="7" style="width:100%"></div>
           <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">年間所定労働日数</label><input type="number" id="lp-prev2-annual-days" min="0" max="366" style="width:100%"></div>
           <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">週所定労働時間</label><input type="number" id="lp-prev2-weekly-hours" min="0" max="80" step="0.5" style="width:100%"></div>
         </div>
@@ -1557,6 +1573,12 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
 </div>
 
 <!-- ver.7.8.0 No.9: 印刷・PDF出力 -->
+<!-- ver.8.7.0 ③: 複数の時間帯を選んでいる間に出る操作バー -->
+<div id="cell-multi-bar" role="region" aria-label="複数選択">
+  <span id="cell-multi-count"></span>
+  <button type="button" class="btn btn-success" onclick="openCellMultiEdit()">業務・休憩を設定</button>
+  <button type="button" class="btn btn-outline" onclick="cellSelClear()">選択を解除</button>
+</div>
 <!-- ver.8.6.0 ④: コマを選んで業務・休憩 -->
 <div class="modal-overlay" id="modal-cell-edit">
   <div class="modal" style="width:460px">
@@ -1658,7 +1680,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
    以下の2行を自分のプロジェクトの値に書き換えてください
 ================================================================ */
 // アプリのバージョン（大規模改修: x.0.0 / 中規模: 0.x.0 / 小規模: 0.0.x）
-const APP_VERSION = '8.6.5';
+const APP_VERSION = '8.7.0';
 const SUPABASE_URL = 'https://iehxxwhzzwlhqwxqgdph.supabase.co';           // 例: https://xxxxxxxxxx.supabase.co
 const SUPABASE_KEY = 'sb_publishable_frYDQgYp34Gqw90YoleZzg_DeaoWOEb';       // 例: sb_publishable_xxxxxxxxxxxx
 // 追加修正: RLS有効化に伴い、テーブルへは直接アクセスせず、必ずEdge Function（プロキシ）を経由する。
@@ -1935,6 +1957,7 @@ const AppState = {
   currentShiftView: 'month',
   currentDayDate: null,
   dayListDate: '', dayListIssueOnly: false, // ver.8.5.0 17
+  sortByStart: false, // ver.8.7.0 ①: 日表示・日別一覧を開始時刻順に
   shiftEditTarget: {},
   importFileData: null,
   secLog: [],
@@ -2001,7 +2024,7 @@ function saveAdminView() {
     fid: AppState.currentFacilityId, ym: document.getElementById('shift-month')?.value || null,
     view: AppState.currentShiftView, period: AppState.shiftPeriod, emp: AppState.adminEmpFilter,
     jobs: AppState.adminJobFilters||[], group: AppState.adminJobGroup!==false, day: AppState.currentDayDate||null,
-    dl: AppState.dayListDate||'', dlIssue: !!AppState.dayListIssueOnly
+    dl: AppState.dayListDate||'', dlIssue: !!AppState.dayListIssueOnly, sortStart: !!AppState.sortByStart
   }});
 }
 function restoreAdminView() {
@@ -2017,6 +2040,7 @@ function restoreAdminView() {
   if(typeof v.day==='string' && /^\d{4}-\d{2}-\d{2}$/.test(v.day)) AppState.currentDayDate=v.day;
   if(typeof v.dl==='string' && /^\d{4}-\d{2}-\d{2}$/.test(v.dl)) AppState.dayListDate=v.dl;
   AppState.dayListIssueOnly = v.dlIssue===true;
+  AppState.sortByStart = v.sortStart===true;
   VIEW_KINDS.forEach(k=>document.getElementById('view-btn-'+k)?.classList.toggle('active', k===AppState.currentShiftView));
 }
 
@@ -2340,9 +2364,12 @@ function getStaffShiftActivitiesForDate(empId, ds, ym) {
 // PostgRESTのselect指定で id,name のみを取得し、謝礼金の単価(amount)はDBからそもそも送信させない。
 async function loadActivityNamesForStaff() {
   try {
-    const rows = await DB.get('facility_activities', '?select=id,name&deleted_at=is.null');
+    // ver.8.7.0 ②: スタッフ画面には表示名（未設定なら名前）を出す。列が無い環境では名前だけ読む
+    let rows;
+    try { rows = await DB.get('facility_activities', '?select=id,name,display_name&deleted_at=is.null'); }
+    catch(colErr) { if(!/display_name/i.test(colErr.message||'')) throw colErr; rows = await DB.get('facility_activities', '?select=id,name&deleted_at=is.null'); }
     AppState.activityNames = {};
-    rows.forEach(r => { AppState.activityNames[r.id] = r.name; });
+    rows.forEach(r => { AppState.activityNames[r.id] = (typeof r.display_name==='string' && r.display_name.trim()) ? r.display_name.trim() : r.name; });
   } catch(err) {
     AppState.activityNames = {};
     console.warn('個別項目名の読み込みエラー（未対応の可能性）:', err.message);
@@ -2873,6 +2900,7 @@ function showTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('tab-'+name)?.classList.add('active');
+  if(name!=='shift' && CellSel.ranges.length) cellSelClear(); // ver.8.7.0 ③: 別の画面へ移ったら複数選択を解除
   document.querySelectorAll(`.nav-item[onclick="showTab('${name}')"]`).forEach(n=>n.classList.add('active'));
   Security.log('TAB',name);
   SessionStore.saveTab(name); // ver.7.5.3 No.1
@@ -2889,7 +2917,8 @@ async function loadFacilityActivitiesMaster() {
   try {
     const rows = await DB.get('facility_activities', '?deleted_at=is.null&order=name.asc');
     AppState.facilityActivities = rows.map(a => ({
-      id: a.id, facilityId: a.facility_id, name: a.name, amount: a.amount!=null?Number(a.amount):0, deleted: false
+      id: a.id, facilityId: a.facility_id, name: a.name, amount: a.amount!=null?Number(a.amount):0, deleted: false,
+      displayName: typeof a.display_name==='string' ? a.display_name : '' // ver.8.7.0 ②: スタッフ向けの表示名（空欄なら名前）
     }));
   } catch(err) {
     AppState.facilityActivities = [];
@@ -3586,10 +3615,12 @@ function renderFacilityActivitiesList(facilityId) {
   const acts = AppState.facilityActivities.filter(a=>a.facilityId===facilityId && !a.deleted);
   renderFacilityJobAssign(facilityId); // ver.8.3.0 ④
   if(!acts.length){ box.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px 0;font-size:13px">個別項目が登録されていません</p>'; return; }
-  box.innerHTML = acts.map(a=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
-    <span style="font-size:13px;flex:1">${Security.escapeHtml(a.name)}</span>
-    <input type="number" class="act-amount-input" data-act-id="${Security.escapeHtml(a.id)}" value="${a.amount||0}" min="0" max="1000000" step="1" style="width:110px" placeholder="金額(円/回)">
-    <button class="btn btn-outline btn-sm" onclick="saveFacilityActivityAmount('${Security.escapeHtml(a.id)}')">金額保存</button>
+  box.innerHTML = `<div style="display:flex;gap:8px;font-size:11px;color:var(--text-muted);padding:0 0 2px"><span style="flex:1;min-width:80px">名前（管理者用）</span><span style="width:150px">表示名（スタッフ・掲示用）</span><span style="width:100px">金額（円/回）</span><span style="width:110px"></span></div>`
+    + acts.map(a=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+    <span style="font-size:13px;flex:1;min-width:80px">${Security.escapeHtml(a.name)}</span>
+    <input type="text" class="act-disp-input" data-act-id="${Security.escapeHtml(a.id)}" value="${Security.escapeHtml(a.displayName||'')}" maxlength="30" style="width:150px" placeholder="表示名（スタッフ向け）" title="スタッフ画面・掲示用PDFに出す名前です。空欄なら左の名前を出します">
+    <input type="number" class="act-amount-input" data-act-id="${Security.escapeHtml(a.id)}" value="${a.amount||0}" min="0" max="1000000" step="1" style="width:100px" placeholder="金額(円/回)">
+    <button class="btn btn-outline btn-sm" onclick="saveFacilityActivityAmount('${Security.escapeHtml(a.id)}')">保存</button>
     <button class="btn btn-outline btn-sm" onclick="deleteFacilityActivity('${Security.escapeHtml(a.id)}')">削除</button>
   </div>`).join('');
 }
@@ -3641,13 +3672,28 @@ async function saveFacilityActivityAmount(id) {
   if(!input){ return; }
   const amount = Security.sanitizeNum(input.value, 0, 1000000);
   input.value = amount;
+  const dispEl = document.querySelector(`.act-disp-input[data-act-id="${id}"]`);
+  const displayName = dispEl ? Security.sanitizeStr(dispEl.value, 30) : null; // ver.8.7.0 ②
+  if(dispEl) dispEl.value = displayName;
   showLoading('保存中...');
   try {
     await DB.patch('facility_activities', {amount}, `?id=eq.${encodeURIComponent(id)}`);
     const a = AppState.facilityActivities.find(x=>x.id===id);
     if(a) a.amount = amount;
     Security.log('FAC_ACTIVITY_AMOUNT', `${id}:${amount}`);
-    showNotif('金額を更新しました','success');
+    let dispSaved = true;
+    if(dispEl && a && displayName!==(a.displayName||'')){
+      try {
+        await DB.patch('facility_activities', {display_name: displayName||null}, `?id=eq.${encodeURIComponent(id)}`);
+        a.displayName = displayName;
+        Security.log('FAC_ACTIVITY_DISPLAY_NAME', `${id}:${displayName}`);
+      } catch(dErr) {
+        dispSaved = false;
+        Security.log('FAC_ACTIVITY_DISPLAY_NAME_ERR', dErr.message, 'ERROR');
+      }
+    }
+    if(!dispSaved) showNotif('金額は保存しましたが、表示名を保存する列がDBに未追加です。SupabaseでSQL（ver.8.7.0）を実行してください','error');
+    else showNotif('保存しました','success');
   } catch(err) {
     let msg='金額の更新に失敗しました';
     if(isMissingTableErr(err)) msg='個別項目機能に必要なテーブルがDBに未作成です。Supabaseにfacility_activities・shift_activitiesテーブルを追加してください';
@@ -4157,24 +4203,37 @@ function applyLeaveProfileMonthSum() {
 async function saveLeaveProfile() {
   const id = document.getElementById('lp-emp-id').value;
   const err = document.getElementById('lp-error');
-  const numOrNull = (v, min, max) => {
-    if(v===''||v==null) return null;
-    return Security.sanitizeNum(v, min, max);
+  // ver.8.6.6: 範囲外の値は黙って丸めずに、どの欄かを示して保存を止める。時間は0.5時間単位まで受け付ける
+  const problems=[];
+  const val = (elId, label, min, max, opt={}) => {
+    const raw = String(document.getElementById(elId).value||'').trim();
+    if(raw==='') return null;
+    const n = opt.decimal ? Number(raw) : Number(raw);
+    if(!Number.isFinite(n) || (!opt.decimal && !Number.isInteger(n))){ problems.push(`${label}は${opt.decimal?'数値':'整数'}で入力してください（入力：${raw}）`); return null; }
+    if(n<min || n>max){ problems.push(`${label}は${min}〜${max}の範囲で入力してください（入力：${raw}）`); return null; }
+    return opt.decimal ? Math.round(n*2)/2 : n;
   };
   const priorityRule = document.getElementById('lp-priority-rule').value==='annual' ? 'annual' : 'weekly';
-  const weeklyHours = numOrNull(document.getElementById('lp-weekly-hours').value, 0, 80);
-  const annualDays = numOrNull(document.getElementById('lp-annual-days').value, 0, 366);
+  const weeklyHours = val('lp-weekly-hours', '週所定労働時間', 0, 80, {decimal:true});
+  const annualDays = val('lp-annual-days', '当年度の年間所定労働日数', 0, 366);
   const months = [];
-  for(let i=1;i<=12;i++){
-    const raw = document.getElementById(`lp-month-${i}`).value;
-    months.push(raw===''?null:Security.sanitizeNum(raw,0,31));
+  for(let i=1;i<=12;i++) months.push(val(`lp-month-${i}`, `${i}月の所定労働日数`, 0, 31));
+  // 前年度・前々年度：3つとも空欄か0なら「未入力」として扱う（前々年度への切り替えが正しく働くように）
+  const yearGroup = (pre, label) => {
+    let wd = val(`lp-${pre}-weekly-days`, `${label}の週所定労働日数`, 0, 7);
+    let ad = val(`lp-${pre}-annual-days`, `${label}の年間所定労働日数`, 0, 366);
+    let wh = val(`lp-${pre}-weekly-hours`, `${label}の週所定労働時間`, 0, 80, {decimal:true});
+    if(!wd && !ad && !wh) return [null, null, null];
+    return [wd===0 ? null : wd, ad, wh];
+  };
+  const [prevYearWeeklyDays, prevYearAnnualDays, prevYearWeeklyHours] = yearGroup('prev', '前年度実績');
+  const [prev2YearWeeklyDays, prev2YearAnnualDays, prev2YearWeeklyHours] = yearGroup('prev2', '前々年度実績');
+  if(problems.length){
+    err.innerHTML = '入力内容を確認してください：<br>' + problems.map(p=>Security.escapeHtml(p)).join('<br>');
+    err.style.display='block';
+    return;
   }
-  const prevYearWeeklyDays = numOrNull(document.getElementById('lp-prev-weekly-days').value, 1, 5);
-  const prevYearAnnualDays = numOrNull(document.getElementById('lp-prev-annual-days').value, 0, 366);
-  const prevYearWeeklyHours = numOrNull(document.getElementById('lp-prev-weekly-hours').value, 0, 80);
-  const prev2YearWeeklyDays = numOrNull(document.getElementById('lp-prev2-weekly-days').value, 1, 5);
-  const prev2YearAnnualDays = numOrNull(document.getElementById('lp-prev2-annual-days').value, 0, 366);
-  const prev2YearWeeklyHours = numOrNull(document.getElementById('lp-prev2-weekly-hours').value, 0, 80);
+  err.style.display='none';
 
   const payload = {
     leave_priority_rule: priorityRule,
@@ -4205,8 +4264,14 @@ async function saveLeaveProfile() {
     showNotif('年休設定を保存しました','success');
   } catch(err2) {
     let msg='保存に失敗しました';
-    if(/column .*(leave_priority_rule|weekly_scheduled_hours|annual_scheduled_days|monthly_scheduled_days|prev_year_|prev2_year_)/i.test(err2.message||'')) {
-      msg='年休ロジック関連のカラムがDBに未追加です。Supabaseのemployeesテーブルに leave_priority_rule(text), weekly_scheduled_hours(numeric), annual_scheduled_days(int), monthly_scheduled_days(text), prev_year_weekly_days(int), prev_year_annual_days(int), prev_year_weekly_hours(numeric), prev2_year_weekly_days(int), prev2_year_annual_days(int), prev2_year_weekly_hours(numeric) を追加してください';
+    const em=err2.message||'';
+    // ver.8.6.6: 列が無いときのエラー文（Could not find the 'xxx' column …）も正しく見分ける
+    if(/(leave_priority_rule|weekly_scheduled_hours|annual_scheduled_days|monthly_scheduled_days|prev_year_|prev2_year_)/i.test(em) && /column|schema cache/i.test(em)) {
+      msg='年休設定を保存する列がDBに未追加です。SupabaseでSQL（ver.8.6.6 年休設定の列）を実行してください';
+    } else if(err2.sessionExpired) {
+      msg='ログインの有効期限が切れています。いったんログアウトして、もう一度ログインしてください';
+    } else {
+      msg=`保存に失敗しました（原因：${Security.sanitizeStr(em,160)}）`;
     }
     err.textContent=msg; err.style.display='block';
     Security.log('LEAVE_PROFILE_ERR', err2.message, 'ERROR');
@@ -4763,6 +4828,12 @@ function parseJobItems(v) {
   Object.keys(o).slice(0,50).forEach(k=>{ if(typeof o[k]==='string' && o[k]) out[Security.sanitizeStr(k,64)]=Security.sanitizeStr(o[k],64); });
   return out;
 }
+// ver.8.7.0 ②: スタッフ向け（掲示用PDFを含む）に出す個別項目の名前
+function activityStaffName(id) {
+  const a=AppState.facilityActivities.find(x=>x.id===id);
+  if(a) return (a.displayName||'').trim() || a.name;
+  return AppState.activityNames?.[id] || '業務';
+}
 function getFacilityJobItems(fid) { return AppState.facilityActivities.filter(a=>a.facilityId===fid && !a.deleted); }
 function getEmpJobId(emp, fid) {
   const id = emp?.jobItems?.[fid];
@@ -4985,6 +5056,108 @@ async function saveStaffOrder() {
   } finally { hideLoading(); }
 }
 
+/* ver.8.7.0 ①: シフト表で名前の「⋮⋮」をつかんで上下にドラッグし、並び順を直接変える
+   - 並びの優先順（責任者 → 職種 → 任意）は変えず、同じグループの中で動かす
+   - 離した時点で保存（「★ 並び順・責任者」の画面と同じ設定） */
+function canDragRows() {
+  return AppState.currentUser?.role==='admin' && !((AppState.currentShiftView==='day'||AppState.currentShiftView==='daylist') && AppState.sortByStart);
+}
+function dragHandleHtml(emp) {
+  if(!emp || emp.isHelper || !canDragRows()) return '';
+  return `<i class="drag-h" data-drag-emp="${Security.escapeHtml(emp.id)}" title="ドラッグして並べ替え" role="button" aria-label="${Security.escapeHtml(emp.name)}を並べ替え"></i>`;
+}
+function fullDisplayOrder(fid) {
+  const ym=document.getElementById('shift-month')?.value || fmtDate(new Date()).slice(0,7);
+  const emps=getVisibleEmployeesForFacility(fid, ym).filter(e=>!e.isHelper);
+  const saveMode=AppState.adminEmpFilter, saveJobs=AppState.adminJobFilters;
+  AppState.adminEmpFilter='all'; AppState.adminJobFilters=[];
+  try { return filterSortAdminEmps(emps, fid, ym, []); } finally { AppState.adminEmpFilter=saveMode; AppState.adminJobFilters=saveJobs; }
+}
+const RowDrag = { id:null, over:null, after:false, ok:false };
+function rowDragClear() {
+  document.querySelectorAll('#shift-view-area tr.drop-before,#shift-view-area tr.drop-after,#shift-view-area tr.drop-ng,#shift-view-area tr.row-drag-src').forEach(tr=>tr.classList.remove('drop-before','drop-after','drop-ng','row-drag-src'));
+}
+document.addEventListener('pointerdown', e=>{
+  const h=e.target.closest?.('#shift-view-area .drag-h'); if(!h) return;
+  e.preventDefault(); e.stopPropagation();
+  RowDrag.id=h.dataset.dragEmp; RowDrag.over=null; RowDrag.ok=false;
+  RowDrag.list=fullDisplayOrder(AppState.currentFacilityId);
+  document.body.classList.add('row-dragging');
+  document.querySelectorAll('#shift-view-area tr[data-emp]').forEach(tr=>{ if(tr.dataset.emp===RowDrag.id) tr.classList.add('row-drag-src'); });
+}, true);
+document.addEventListener('pointermove', e=>{
+  if(!RowDrag.id) return;
+  e.preventDefault();
+  const el=document.elementFromPoint(e.clientX, e.clientY);
+  const tr=el?.closest?.('#shift-view-area tr[data-emp]');
+  document.querySelectorAll('#shift-view-area tr.drop-before,#shift-view-area tr.drop-after,#shift-view-area tr.drop-ng').forEach(x=>x.classList.remove('drop-before','drop-after','drop-ng'));
+  RowDrag.over=null;
+  if(!tr || tr.dataset.emp===RowDrag.id) return;
+  const a=RowDrag.list.find(x=>x.id===RowDrag.id), b=RowDrag.list.find(x=>x.id===tr.dataset.emp);
+  const r=tr.getBoundingClientRect();
+  RowDrag.over=tr.dataset.emp; RowDrag.after = e.clientY > r.top + r.height/2;
+  RowDrag.ok = !!a && !!b && a._jobKey===b._jobKey;
+  tr.classList.add(RowDrag.ok ? (RowDrag.after?'drop-after':'drop-before') : 'drop-ng');
+});
+document.addEventListener('pointerup', ()=>{
+  if(!RowDrag.id) return;
+  const {id, over, after, ok}=RowDrag;
+  RowDrag.id=null; document.body.classList.remove('row-dragging'); rowDragClear();
+  if(!over) return;
+  if(!ok){ showNotif('並び順は「責任者 → 職種」のグループの中で変えられます。グループをまたぐときは「★ 並び順・責任者」で責任者・職種を変えてください','error'); return; }
+  moveEmpOrder(id, over, after);
+});
+async function moveEmpOrder(id, targetId, after) {
+  if(!Auth.requireAdmin()) return;
+  const fid=AppState.currentFacilityId;
+  const f=AppState.facilities.find(x=>x.id===fid); if(!f) return;
+  const list=fullDisplayOrder(fid);
+  const a=list.find(x=>x.id===id), b=list.find(x=>x.id===targetId);
+  if(!a || !b || a._jobKey!==b._jobKey) return;
+  const ids=list.map(x=>x.id).filter(x=>x!==id);
+  const at=ids.indexOf(targetId)+(after?1:0);
+  ids.splice(at, 0, id);
+  const prev=getFacilityDisplay(fid);
+  const clean=parseStaffDisplay({ leaders: prev.leaders, order: [...ids, ...prev.order.filter(x=>!ids.includes(x) && x!==id)] });
+  const keep=f.display; f.display=clean; renderShiftView(); // すぐに画面へ反映
+  try {
+    await DB.patch('facilities', {staff_display: clean}, `?id=eq.${encodeURIComponent(fid)}`);
+    Security.log('STAFF_ORDER_DRAG', `${fid} ${id}->${after?'after':'before'}:${targetId}`);
+    showNotif('並び順を保存しました','success');
+  } catch(err) {
+    f.display=keep; renderShiftView();
+    Security.log('STAFF_ORDER_DRAG_ERR', err.message, 'ERROR');
+    showNotif(isMissingColumnErr(err, ['staff_display']) ? '並び順を保存する列がDBに未追加です。SupabaseでSQL（ver.8.5.0）を実行してください' : '並び順の保存に失敗しました','error');
+  }
+}
+/* ver.8.7.0 ①: 日表示・日別一覧で「開始時刻順」（その日の勤務が早い人から）に並べる */
+function setSortByStart(on) { AppState.sortByStart=!!on; Security.log('SORT_BY_START', on?'on':'off'); renderShiftView(); }
+function startMinOf(sh, req) {
+  if(sh && !sh.isOffDuty && !sh.isAnnual && sh.start) return tMin(sh.start);
+  if(req && !req.isAnnual && req.start && (!sh || sh.isOffDuty)) return 2000 + tMin(req.start); // 勤務が無い人（空き番・希望）は後ろ
+  return 5000;
+}
+function sortEmpsByStart(list, dateStr, fid, ym) {
+  const shifts=getShiftsFor(fid, ym).filter(x=>x.date===dateStr);
+  const gi=new Map(); list.forEach(e=>{ if(!gi.has(e._jobKey)) gi.set(e._jobKey, gi.size); });
+  const ix=new Map(list.map((e,i)=>[e.id,i]));
+  const st=e=>startMinOf(shifts.find(x=>x.empId===e.id), getRequestFor(e.id, dateStr));
+  const out=[...list].sort((a,b)=>{
+    if(a.isHelper!==b.isHelper) return a.isHelper?1:-1;
+    if(list._grouped){ const d=gi.get(a._jobKey)-gi.get(b._jobKey); if(d) return d; }
+    return (st(a)-st(b)) || (ix.get(a.id)-ix.get(b.id));
+  });
+  out._grouped=list._grouped;
+  return out;
+}
+function syncViewOptions() {
+  const w=document.getElementById('shift-sort-start-wrap');
+  if(w) w.style.display = (AppState.currentShiftView==='day'||AppState.currentShiftView==='daylist') ? '' : 'none';
+  const cb=document.getElementById('shift-sort-start'); if(cb) cb.checked=!!AppState.sortByStart;
+  if(AppState.currentShiftView!=='daylist' && CellSel.ranges.length) cellSelClear();
+  syncCellMultiBar();
+}
+
 function emptyEmpRowHtml(colspan) {
   const mode = AppState.adminEmpFilter || 'all';
   const jf = (AppState.adminJobFilters||[]).length ? 'some' : 'all';
@@ -5136,6 +5309,7 @@ function buildPrintDayHtml(fid, ym, dateStr, includeReq, post) {
   const grouped=emps._grouped;
   emps=emps.filter(e=>shifts.some(s=>s.empId===e.id) || (includeReq && reqOk(getRequestFor(e.id,dateStr)) && getRequestFor(e.id,dateStr).status==='pending'));
   emps._grouped=grouped;
+  if(AppState.sortByStart) emps=sortEmpsByStart(emps, dateStr, fid, ym); // ver.8.7.0 ①
   // 表示する時間帯（登録内容から自動。なければ 8:00〜20:00）
   const toMin=t=>{ const [hh,mm]=String(t||'0:0').split(':').map(Number); return hh*60+mm; };
   let lo=24*60, hi=0;
@@ -5300,6 +5474,10 @@ function buildDayListModel(fid, ym, period, includeReq, post) {
       else if(!s && includeReq && r && r.status==='pending' && !r.isAnnual && (!r.facilityId||r.facilityId===fid)) kind='req';
       if(kind) rows.push({emp, s, r, kind, acts: (s && s.id && (kind==='shift'||kind==='draft')) ? actsAll.filter(a=>a.shiftId===s.id).sort((p,q)=>(p.start||'').localeCompare(q.start||'')) : []});
     });
+    if(AppState.sortByStart){ // ver.8.7.0 ①: その日の勤務が早い人から
+      const ix=new Map(rows.map((x,i)=>[x,i]));
+      rows.sort((p,q)=>(p.emp.isHelper!==q.emp.isHelper ? (p.emp.isHelper?1:-1) : 0) || (startMinOf(p.s, p.r)-startMinOf(q.s, q.r)) || (ix.get(p)-ix.get(q)));
+    }
     const counts=slots.map(t=>rows.filter(x=>{
       if(x.kind!=='shift' && x.kind!=='draft') return false;
       const a=mStr(t), b=mStr(t+30);
@@ -5355,10 +5533,10 @@ function dayListTableHtml(model, opts) {
       else if(x.kind==='off') tt=`(空) ${offDutyReqTime(r)||'空き番'}`;
       else if(x.kind==='req') tt=`希望 ${r.start}-${r.end}`;
       const jn = (!x.emp.isHelper && getEmpJobName(x.emp, opts.fid)) ? `［${getEmpJobName(x.emp, opts.fid)}］` : '';
-      const actName = a => AppState.facilityActivities.find(m=>m.id===a.activityId)?.name || AppState.activityNames?.[a.activityId] || '業務';
+      const actName = a => opts.post ? activityStaffName(a.activityId) : (AppState.facilityActivities.find(m=>m.id===a.activityId)?.name || AppState.activityNames?.[a.activityId] || '業務'); // ver.8.7.0 ②: 掲示用は表示名
       const actTxt = (x.acts||[]).map(a=>`${actName(a)} ${a.start}-${a.end}`).join('、'); // ver.8.5.0 16
       const nm = leaderMarkHtml(x.emp, opts.fid) + (screen ? `<a onclick="openShiftEntryModal('${Security.escapeHtml(x.emp.id)}','${dm.ds}')">${Security.escapeHtml(x.emp.name)}</a>` : Security.escapeHtml(x.emp.name));
-      h+=`<tr${ri===0?' class="gp-top"':''}><td class="dlt-name">${nm}<span class="t">${Security.escapeHtml(jn+tt)}</span>${actTxt?`<span class="t" style="color:#1d4ed8">${Security.escapeHtml(actTxt)}</span>`:''}</td>`;
+      h+=`<tr${ri===0?' class="gp-top"':''}${screen?` data-emp="${Security.escapeHtml(x.emp.id)}"`:''}><td class="dlt-name">${screen?dragHandleHtml(x.emp):''}${nm}<span class="t">${Security.escapeHtml(jn+tt)}</span>${actTxt?`<span class="t" style="color:#1d4ed8">${Security.escapeHtml(actTxt)}</span>`:''}</td>`;
       slots.forEach((t,si)=>{
         const a=mStr(t), b=mStr(t+30);
         let cls=t%60===0?'p-hr':'';
@@ -5419,7 +5597,8 @@ function dayListSummaryHtml(model, fid, screen) {
    - 休憩は何回でも分けて設定できる（合計が法定休憩に足りないときは注意を出す）
    - 確定済みのシフトも、確定解除せずにそのまま変更できる（勤務時間そのものは変えない）
 ================================================================ */
-const CellSel = { anchor:null, cur:null, dragging:false };
+const CellSel = { anchor:null, cur:null, dragging:false, moved:false, multi:false, ranges:[] };
+let cellMultiMode=false; // ver.8.7.0 ③: スマホ・タブレット用「続けて選ぶ」
 function cellSelParse(td) {
   const v=td?.dataset?.sel; if(!v) return null;
   const [emp, ds, t]=v.split('|');
@@ -5427,71 +5606,134 @@ function cellSelParse(td) {
   if(!emp || !/^\d{4}-\d{2}-\d{2}$/.test(ds) || !(tn>=0 && tn<1440)) return null;
   return { emp, ds, t:tn };
 }
+function cellSelInRange(p, r) { return p.emp===r.emp && p.ds===r.ds && p.t>=r.lo && p.t<=r.hi; }
 function cellSelPaint() {
-  document.querySelectorAll('#shift-view-area td.cell-sel').forEach(td=>td.classList.remove('cell-sel'));
-  const a=CellSel.anchor, c=CellSel.cur||CellSel.anchor; if(!a) return;
-  const lo=Math.min(a.t,c.t), hi=Math.max(a.t,c.t);
+  const a=CellSel.anchor, c=CellSel.cur||CellSel.anchor;
+  const curR = a ? {emp:a.emp, ds:a.ds, lo:Math.min(a.t,c.t), hi:Math.max(a.t,c.t)} : null;
   document.querySelectorAll('#shift-view-area td[data-sel]').forEach(td=>{
-    const p=cellSelParse(td); if(p && p.emp===a.emp && p.ds===a.ds && p.t>=lo && p.t<=hi) td.classList.add('cell-sel');
+    const p=cellSelParse(td);
+    const on = !!p && ((curR && cellSelInRange(p,curR)) || CellSel.ranges.some(r=>cellSelInRange(p,r)));
+    td.classList.toggle('cell-sel', on);
   });
+  syncCellMultiBar();
 }
-function cellSelClear() { CellSel.anchor=null; CellSel.cur=null; CellSel.dragging=false; cellSelPaint(); }
+function cellSelClear() { CellSel.anchor=null; CellSel.cur=null; CellSel.dragging=false; CellSel.multi=false; CellSel.ranges=[]; cellSelPaint(); }
+// ver.8.7.0 ③: Ctrl・Alt（Mac は ⌘・option）を押しながら選ぶと、選択を追加していく
+function cellSelAddCurrent() {
+  const a=CellSel.anchor, c=CellSel.cur||a; if(!a) return;
+  const r={emp:a.emp, ds:a.ds, lo:Math.min(a.t,c.t), hi:Math.max(a.t,c.t)};
+  // 同じ範囲をもう一度選んだら、その選択を外す
+  const same=CellSel.ranges.findIndex(x=>x.emp===r.emp && x.ds===r.ds && x.lo===r.lo && x.hi===r.hi);
+  if(same>=0) CellSel.ranges.splice(same,1); else CellSel.ranges.push(r);
+  if(CellSel.ranges.length>60) CellSel.ranges.shift();
+  CellSel.anchor=null; CellSel.cur=null; CellSel.dragging=false; CellSel.multi=false;
+  cellSelPaint();
+}
+function cellSelRangesToItems(ranges) { return ranges.map(r=>({ empId:r.emp, ds:r.ds, from:mStr(r.lo), to:mStr(r.hi+30) })); }
 function cellSelFinish() {
   const a=CellSel.anchor, c=CellSel.cur||a; if(!a) return;
-  const lo=Math.min(a.t,c.t), hi=Math.max(a.t,c.t)+30;
+  const r={emp:a.emp, ds:a.ds, lo:Math.min(a.t,c.t), hi:Math.max(a.t,c.t)};
   CellSel.dragging=false;
-  openCellEdit(a.emp, a.ds, mStr(lo), mStr(hi));
+  openCellEditMulti(cellSelRangesToItems([r]));
 }
+function openCellMultiEdit() { if(CellSel.ranges.length) openCellEditMulti(cellSelRangesToItems(CellSel.ranges)); }
+function toggleCellMultiMode() {
+  cellMultiMode=!cellMultiMode;
+  const b=document.getElementById('cell-multi-btn'); if(b){ b.classList.toggle('on', cellMultiMode); b.setAttribute('aria-pressed', String(cellMultiMode)); }
+  if(!cellMultiMode && !CellSel.ranges.length) cellSelClear();
+  syncCellMultiBar();
+}
+function syncCellMultiBar() {
+  const bar=document.getElementById('cell-multi-bar'); if(!bar) return;
+  const n=CellSel.ranges.length;
+  const show = n>0 && AppState.currentShiftView==='daylist' && !!document.getElementById('tab-shift')?.classList.contains('active');
+  bar.style.display = show ? 'flex' : 'none';
+  if(show){
+    const people=new Set(CellSel.ranges.map(r=>r.emp)).size;
+    document.getElementById('cell-multi-count').textContent=`${n}か所を選択中（${people}人）`;
+  }
+}
+const cellSelAddKey = e => !!(e.ctrlKey || e.metaKey || e.altKey || cellMultiMode); // Ctrl・Alt（Mac は ⌘・option）
 document.addEventListener('pointerdown', e=>{
   const td=e.target.closest?.('#shift-view-area .dlt td[data-sel]'); if(!td) return;
   const p=cellSelParse(td); if(!p) return;
   e.preventDefault();
+  if(cellSelAddKey(e)){ // 追加で選ぶ
+    CellSel.anchor=p; CellSel.cur=p; CellSel.dragging=true; CellSel.multi=true; CellSel.moved=false; cellSelPaint(); return;
+  }
+  if(CellSel.ranges.length){ CellSel.ranges=[]; } // キーを押さずに選んだら、これまでの複数選択は解除
   if(CellSel.anchor && !CellSel.dragging && CellSel.anchor.emp===p.emp && CellSel.anchor.ds===p.ds){
     CellSel.cur=p; cellSelPaint(); cellSelFinish(); return; // 2回目のクリックで範囲を確定
   }
-  CellSel.anchor=p; CellSel.cur=p; CellSel.dragging=true; CellSel.moved=false; cellSelPaint();
+  CellSel.anchor=p; CellSel.cur=p; CellSel.dragging=true; CellSel.multi=false; CellSel.moved=false; cellSelPaint();
 });
 document.addEventListener('pointerover', e=>{
   if(!CellSel.dragging) return;
-  const td=e.target.closest?.('#shift-view-area .dlt td[data-sel]'); if(!td) return;
+  const td=e.target.closest?.('#shift-view-area td[data-sel]'); if(!td) return;
   const p=cellSelParse(td); if(!p || p.emp!==CellSel.anchor.emp || p.ds!==CellSel.anchor.ds) return;
   if(p.t!==CellSel.cur.t){ CellSel.cur=p; CellSel.moved=true; cellSelPaint(); }
 });
 document.addEventListener('pointerup', ()=>{
   if(!CellSel.dragging) return;
+  if(CellSel.multi){ cellSelAddCurrent(); return; }
   CellSel.dragging=false;
   if(CellSel.moved) cellSelFinish(); // ドラッグした時はそのまま確定。1コマだけ押した時は、もう1コマ押すか同じコマをもう一度押す
 });
-document.addEventListener('keydown', e=>{ if(e.key==='Escape' && CellSel.anchor) cellSelClear(); });
+// Mac の Ctrl＋クリック（右クリックの代わり）でメニューが出ないようにする
+document.addEventListener('keyup', e=>{ if(e.key==='Alt' && AppState.currentShiftView==='daylist') e.preventDefault(); });
+document.addEventListener('contextmenu', e=>{ if(e.target.closest?.('#shift-view-area td[data-sel]') && e.ctrlKey) e.preventDefault(); });
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape' && (CellSel.anchor || CellSel.ranges.length)) cellSelClear();
+  else if(e.key==='Alt' && AppState.currentShiftView==='daylist') e.preventDefault(); // Windows で Alt を離した時にブラウザのメニューへ移らないように
+  else if(e.key==='Enter' && CellSel.ranges.length && !document.querySelector('.modal-overlay.open')){ e.preventDefault(); openCellMultiEdit(); }
+});
 
-function cellEditTarget() {
-  const t=AppState.cellEdit; if(!t) return null;
-  const sh=getShiftsFor(t.fid, t.ym).find(x=>x.empId===t.empId && x.date===t.ds && !x.isOffDuty && !x.isAnnual);
-  return sh ? {t, sh} : null;
-}
-function openCellEdit(empId, ds, from, to) {
+// 1か所（互換）
+function openCellEdit(empId, ds, from, to) { openCellEditMulti([{empId, ds, from, to}]); }
+function openCellEditMulti(list) {
   if(!Auth.requireAdmin()) return;
-  const fid=AppState.currentFacilityId, ym=ds.slice(0,7);
-  const sh=getShiftsFor(fid, ym).find(x=>x.empId===empId && x.date===ds && !x.isOffDuty && !x.isAnnual);
-  if(!sh || !sh.id){ cellSelClear(); showNotif('勤務が登録されていないため設定できません','error'); return; }
-  // 勤務時間の中に収める
-  if(from<sh.start) from=sh.start; if(to>sh.end) to=sh.end;
-  if(from>=to){ cellSelClear(); showNotif('勤務時間の中のコマを選んでください','error'); return; }
-  AppState.cellEdit={ fid, ym, empId, ds, from, to };
-  const emp=AppState.employees.find(e=>e.id===empId);
-  const d=new Date(ds+'T00:00:00');
-  document.getElementById('ce-range').textContent=`${emp?.name||''}　${d.getMonth()+1}/${d.getDate()}(${getDow(d)})　${from}〜${to}`;
-  document.getElementById('ce-sub').textContent=`勤務 ${sh.start}〜${sh.end}（${PUB_LABEL[sh.publishStatus]||'確定'}）　選んだ時間：${calcWorkMinutes(from,to)}分`;
+  const fid=AppState.currentFacilityId;
+  const items=[];
+  (list||[]).forEach(it=>{
+    if(!it || !/^\d{4}-\d{2}-\d{2}$/.test(it.ds||'') || !/^\d{2}:\d{2}$/.test(it.from||'') || !/^\d{2}:\d{2}$/.test(it.to||'')) return;
+    const ym=it.ds.slice(0,7);
+    const sh=getShiftsFor(fid, ym).find(x=>x.empId===it.empId && x.date===it.ds && !x.isOffDuty && !x.isAnnual);
+    if(!sh || !sh.id) return;
+    let from=it.from, to=it.to;
+    if(from<sh.start) from=sh.start; if(to>sh.end) to=sh.end; // 勤務時間の中に収める
+    if(from<to) items.push({ empId:it.empId, ds:it.ds, ym, from, to });
+  });
+  if(!items.length){ cellSelClear(); showNotif('勤務時間の中のコマを選んでください','error'); return; }
+  items.sort((p,q)=>(p.ds+p.empId+p.from).localeCompare(q.ds+q.empId+q.from));
+  AppState.cellEdit={ fid, items };
+  const nm=id=>AppState.employees.find(e=>e.id===id)?.name||'';
+  const dlab=ds=>{ const d=new Date(ds+'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()}(${getDow(d)})`; };
+  const keys=new Set(items.map(x=>x.empId+'|'+x.ds));
+  if(items.length===1){
+    const it=items[0];
+    const sh=getShiftsFor(fid, it.ym).find(x=>x.empId===it.empId && x.date===it.ds && !x.isOffDuty && !x.isAnnual);
+    document.getElementById('ce-range').textContent=`${nm(it.empId)}　${dlab(it.ds)}　${it.from}〜${it.to}`;
+    document.getElementById('ce-sub').textContent=`勤務 ${sh.start}〜${sh.end}（${PUB_LABEL[sh.publishStatus]||'確定'}）　選んだ時間：${calcWorkMinutes(it.from,it.to)}分`;
+  } else {
+    const people=new Set(items.map(x=>x.empId)).size;
+    document.getElementById('ce-range').textContent=`${items.length}か所をまとめて設定（${people}人）`;
+    document.getElementById('ce-sub').textContent=items.map(it=>`${nm(it.empId)} ${dlab(it.ds)} ${it.from}〜${it.to}`).join('、');
+  }
   const has=AppState.facilityActivities.some(a=>a.facilityId===fid && !a.deleted);
   document.getElementById('ce-activity').innerHTML=activityOptionsHtml(fid, AppState.lastCellActivity||null);
   document.getElementById('ce-activity').disabled=!has;
   document.getElementById('ce-act-btn').disabled=!has;
   document.getElementById('ce-noact').style.display = has ? 'none' : '';
-  renderCellEditCurrent(sh);
+  if(keys.size===1){
+    const it=items[0];
+    renderCellEditCurrent(getShiftsFor(fid, it.ym).find(x=>x.empId===it.empId && x.date===it.ds && !x.isOffDuty && !x.isAnnual), it.ym);
+  } else {
+    document.getElementById('ce-cur').innerHTML='<div>選んだすべての時間に、同じ設定をまとめて行います。</div>';
+  }
   openModal('modal-cell-edit');
 }
-function renderCellEditCurrent(sh) {
-  const fid=AppState.cellEdit.fid, ym=AppState.cellEdit.ym;
+function renderCellEditCurrent(sh, ym) {
+  const fid=AppState.cellEdit.fid;
   const brs=shiftBreaksOf(sh);
   const acts=getShiftActivitiesFor(fid, ym).filter(a=>a.shiftId===sh.id).sort((p,q)=>p.start.localeCompare(q.start));
   const name=id=>AppState.facilityActivities.find(a=>a.id===id)?.name||'業務';
@@ -5505,60 +5747,79 @@ function renderCellEditCurrent(sh) {
 function closeCellEdit() { closeModal('modal-cell-edit'); AppState.cellEdit=null; cellSelClear(); }
 async function applyCellEdit(kind) {
   if(!Auth.requireAdmin()) return;
-  const tg=cellEditTarget(); if(!tg){ showNotif('対象のシフトが見つかりません','error'); return; }
-  const {t, sh}=tg;
+  const ce=AppState.cellEdit; if(!ce || !ce.items?.length){ showNotif('対象のシフトが見つかりません','error'); return; }
   if(!['act','break','clear'].includes(kind)) return;
+  const fid=ce.fid;
   let activityId=null;
   if(kind==='act'){
     activityId=document.getElementById('ce-activity').value;
-    if(!AppState.facilityActivities.some(a=>a.id===activityId && a.facilityId===t.fid && !a.deleted)){ showNotif('業務（個別項目）を選んでください','error'); return; }
+    if(!AppState.facilityActivities.some(a=>a.id===activityId && a.facilityId===fid && !a.deleted)){ showNotif('業務（個別項目）を選んでください','error'); return; }
     AppState.lastCellActivity=activityId;
   }
-  const a=t.from, b=t.to;
-  const oldBrs=shiftBreaksOf(sh).map(x=>({...x}));
-  const oldActs=getShiftActivitiesFor(t.fid, t.ym).filter(x=>x.shiftId===sh.id).map(x=>({activityId:x.activityId, start:x.start, end:x.end}));
-  let brs=subtractRange(oldBrs, a, b), acts=subtractRange(oldActs, a, b);
-  if(kind==='break') brs.push({start:a, end:b});
-  if(kind==='act') acts.push({activityId, start:a, end:b});
-  brs=mergeRanges(brs);
-  // 同じ業務が続くときは1つにまとめる
-  acts.sort((p,q)=>p.start.localeCompare(q.start));
-  acts=acts.reduce((o,x)=>{ const l=o[o.length-1]; if(l && l.activityId===x.activityId && l.end===x.start) l.end=x.end; else o.push({...x}); return o; }, []);
-  if(brs.length>12){ showNotif('休憩は12回までです','error'); return; }
-  const brsChanged = JSON.stringify(brs)!==JSON.stringify(oldBrs);
-  const actsChanged = JSON.stringify(acts)!==JSON.stringify(oldActs.sort((p,q)=>p.start.localeCompare(q.start)));
-  if(!brsChanged && !actsChanged){ closeCellEdit(); return; }
-  const span=calcWorkMinutes(sh.start, sh.end), legal=calcLegalBreakMinutes(span);
-  const total=breakTotalMinutes(brs);
+  // 人・日ごとにまとめて、1つのシフトに1回だけ保存する
+  const groups=new Map();
+  ce.items.forEach(it=>{ const k=it.empId+'|'+it.ds; if(!groups.has(k)) groups.set(k, []); groups.get(k).push(it); });
+  const plans=[];
+  for(const [k, its] of groups){
+    const {empId, ds, ym}=its[0];
+    const sh=getShiftsFor(fid, ym).find(x=>x.empId===empId && x.date===ds && !x.isOffDuty && !x.isAnnual);
+    if(!sh?.id) continue;
+    const oldBrs=shiftBreaksOf(sh).map(x=>({...x}));
+    const oldActs=getShiftActivitiesFor(fid, ym).filter(x=>x.shiftId===sh.id).map(x=>({activityId:x.activityId, start:x.start, end:x.end})).sort((p,q)=>p.start.localeCompare(q.start));
+    let brs=oldBrs.map(x=>({...x})), acts=oldActs.map(x=>({...x}));
+    its.forEach(it=>{
+      brs=subtractRange(brs, it.from, it.to); acts=subtractRange(acts, it.from, it.to);
+      if(kind==='break') brs.push({start:it.from, end:it.to});
+      if(kind==='act') acts.push({activityId, start:it.from, end:it.to});
+    });
+    brs=mergeRanges(brs);
+    acts.sort((p,q)=>p.start.localeCompare(q.start));
+    acts=acts.reduce((o,x)=>{ const l=o[o.length-1]; if(l && l.activityId===x.activityId && l.end===x.start) l.end=x.end; else o.push({...x}); return o; }, []); // 同じ業務が続くときは1つに
+    if(brs.length>12){ showNotif(`休憩は12回までです（${AppState.employees.find(e=>e.id===empId)?.name||''} ${ds}）`,'error'); return; }
+    const brsChanged = JSON.stringify(brs)!==JSON.stringify(oldBrs);
+    const actsChanged = JSON.stringify(acts)!==JSON.stringify(oldActs);
+    if(brsChanged || actsChanged) plans.push({ empId, ds, ym, sh, brs, acts, brsChanged, actsChanged });
+  }
+  if(!plans.length){ closeCellEdit(); return; }
   showLoading('保存中...');
+  const shortList=[]; let done=0;
+  const yms=[...new Set(plans.map(p=>p.ym))];
   try {
-    if(brsChanged){
-      // 時間帯の決まった休憩が無くなり、元は「分数だけ」の休憩だった場合は分数を残す
-      const minutes = brs.length ? total : 0;
-      await saveShiftRowWithBreakFlag(sh.id, { breaks: brs, break_start: brs[0]?.start||null, break_end: brs[0]?.end||null, break_minutes: minutes, break_manual: true });
+    for(const p of plans){
+      if(p.brsChanged){
+        const total=breakTotalMinutes(p.brs);
+        await saveShiftRowWithBreakFlag(p.sh.id, { breaks: p.brs, break_start: p.brs[0]?.start||null, break_end: p.brs[0]?.end||null, break_minutes: p.brs.length ? total : 0, break_manual: true });
+        const legal=calcLegalBreakMinutes(calcWorkMinutes(p.sh.start, p.sh.end));
+        if(legal>0 && total<legal) shortList.push({ name: AppState.employees.find(e=>e.id===p.empId)?.name||'', total, legal });
+      }
+      if(p.actsChanged){
+        await DB.del('shift_activities', `?shift_id=eq.${encodeURIComponent(p.sh.id)}`);
+        if(p.acts.length) await DB.post('shift_activities', p.acts.map((x,i)=>({
+          id: 'sa'+Date.now()+i+Math.random().toString(36).slice(2,6),
+          shift_id: p.sh.id, activity_id: x.activityId, facility_id: fid, emp_id: p.empId, date: p.ds, ym: p.ym,
+          start_time: x.start, end_time: x.end, minutes: calcWorkMinutes(x.start, x.end)
+        })));
+      }
+      done++;
+      Security.log('CELL_EDIT', `${p.empId}@${p.ds} ${kind} ${ce.items.filter(x=>x.empId===p.empId&&x.ds===p.ds).map(x=>x.from+'-'+x.to).join(',')} status:${p.sh.publishStatus}`);
     }
-    if(actsChanged){
-      await DB.del('shift_activities', `?shift_id=eq.${encodeURIComponent(sh.id)}`);
-      if(acts.length) await DB.post('shift_activities', acts.map((x,i)=>({
-        id: 'sa'+Date.now()+i+Math.random().toString(36).slice(2,6),
-        shift_id: sh.id, activity_id: x.activityId, facility_id: t.fid, emp_id: t.empId, date: t.ds, ym: t.ym,
-        start_time: x.start, end_time: x.end, minutes: calcWorkMinutes(x.start, x.end)
-      })));
-    }
-    Security.log('CELL_EDIT', `${t.empId}@${t.ds} ${kind} ${a}-${b} status:${sh.publishStatus}`);
-    await Promise.all([loadShiftsForMonth(t.fid, t.ym), loadShiftActivitiesForMonth(t.fid, t.ym)]);
+    await Promise.all(yms.flatMap(ym=>[loadShiftsForMonth(fid, ym), loadShiftActivitiesForMonth(fid, ym)]));
     closeCellEdit();
     renderShiftView();
     const label = kind==='break' ? '休憩' : (kind==='act' ? '業務' : '設定の解除');
-    if(brsChanged && legal>0 && total<legal) showNotif(`${label}を保存しました。休憩が合計${total}分で、法定の${legal}分に足りません。続けて休憩のコマを選んでください`,'error');
-    else showNotif(`${label}を保存しました${sh.publishStatus==='published'?'（確定のまま・スタッフ画面にも反映）':''}`,'success');
+    const where = ce.items.length>1 ? `${ce.items.length}か所に` : '';
+    const pub = plans.some(p=>p.sh.publishStatus==='published') ? '（確定のまま・スタッフ画面にも反映）' : '';
+    if(shortList.length===1 && plans.length===1) showNotif(`${label}を保存しました。休憩が合計${shortList[0].total}分で、法定の${shortList[0].legal}分に足りません。続けて休憩のコマを選んでください`,'error');
+    else if(shortList.length) showNotif(`${where}${label}を保存しました。休憩が法定に足りない人がいます：${shortList.map(x=>`${x.name}（${x.total}/${x.legal}分）`).join('、')}。続けて休憩のコマを選んでください`,'error');
+    else showNotif(`${where}${label}を保存しました${pub}`,'success');
   } catch(err) {
-    Security.log('CELL_EDIT_ERR', err.message, 'ERROR');
+    Security.log('CELL_EDIT_ERR', `done:${done}/${plans.length} ${err.message}`, 'ERROR');
     let msg='保存に失敗しました';
     if(err.message==='BREAKS_COLUMN_MISSING') msg='休憩を2回以上に分けて保存する列がDBに未追加です。SupabaseでSQL（ver.8.6.0）を実行してください';
     else if(isMissingTableErr(err)) msg='業務（個別項目）を記録するテーブルがDBに未作成です';
+    if(done) msg+=`（${done}人分は保存済みです）`;
     showNotif(msg,'error');
-    await Promise.all([loadShiftsForMonth(t.fid, t.ym), loadShiftActivitiesForMonth(t.fid, t.ym)]).catch(()=>{});
+    await Promise.all(yms.flatMap(ym=>[loadShiftsForMonth(fid, ym), loadShiftActivitiesForMonth(fid, ym)])).catch(()=>{});
     renderShiftView();
   } finally { hideLoading(); }
 }
@@ -5655,7 +5916,7 @@ function renderDayListView(ym) {
     + `<span style="color:var(--text-muted)">● ＝人数不足・仮確定・確定解除中がある日</span></div>`;
   const body = shown.length ? `<div class="gantt-container">${dayListTableHtml({...model, dayModels:shown}, {screen:true, fid})}</div>`
     : `<div style="padding:40px;text-align:center;color:var(--text-muted)">${AppState.dayListIssueOnly?'調整が必要な日はありません':'表示する日がありません'}</div>`;
-  area.innerHTML = `<div class="daylist-wrap">${dayListSummaryHtml(model, fid, true)}${filt}<div style="font-size:11px;color:var(--text-muted);margin:0 0 6px">勤務中のコマをドラッグ（または2回クリック）して選ぶと、業務・休憩を設定できます。赤枠は人数が足りない時間帯です。</div>${body}</div>`;
+  area.innerHTML = `<div class="daylist-wrap">${dayListSummaryHtml(model, fid, true)}${filt}<div style="font-size:11px;color:var(--text-muted);margin:0 0 6px">勤務中のコマをドラッグ（または2回クリック）して選ぶと、業務・休憩を設定できます。<b>Ctrl・Alt（Mac は ⌘）を押しながら</b>選ぶと、離れた時間帯や別の人もまとめて選べます。<button type="button" id="cell-multi-btn" class="multi-sel-btn${cellMultiMode?' on':''}" aria-pressed="${cellMultiMode}" onclick="toggleCellMultiMode()" title="スマホ・タブレットでは、これを押してから続けて選びます">続けて選ぶ</button>　赤枠は人数が足りない時間帯です。</div>${body}</div>`;
 }
 // PDF
 function buildDayListPrint(fid, ym, period, includeReq, post) {
@@ -5962,6 +6223,7 @@ function renderShiftView() {
   syncPeriodToggle(ym); // ver.7.6.0 No.8
   updateMonthCloseButtonState(); // ver.8.0.0
   syncDeadlineChip(ym); // ver.8.1.0
+  syncViewOptions(); // ver.8.7.0
   if(AppState.currentShiftView==='daylist') renderDayListView(ym); // ver.8.3.0 ②
   else if(AppState.currentShiftView==='month') renderMonthGantt(ym);
   else if(AppState.currentShiftView==='week') renderWeekGantt(ym);
@@ -5989,7 +6251,7 @@ function renderMonthGantt(ym) {
     const badge = ep.length>0 ? `<span class="pending-annual-badge" onclick="openAnnualApproveModal('${Security.escapeHtml(emp.id)}','${ym}')" title="未承認の年休希望: ${ep.map(r=>r.date).join('、')}">未承認 ×${ep.length}</span>` : '';
     const helperTag = emp.isHelper ? `<span class="badge badge-blue" style="font-size:9px;flex-shrink:0">他施設</span>` : '';
     const concurrentTag = emp.isConcurrent ? `<span class="badge badge-green" style="font-size:9px;flex-shrink:0" title="兼務施設として登録済み">兼務</span>` : '';
-    html+=`<tr class="gantt-row"><td class="name-cell"><div class="name-cell-inner"><span>${leaderMarkHtml(emp, AppState.currentFacilityId)}${Security.escapeHtml(emp.name)}${helperTag}${concurrentTag}</span>${badge}</div></td>`;
+    html+=`<tr class="gantt-row" data-emp="${Security.escapeHtml(emp.id)}"><td class="name-cell"><div class="name-cell-inner"><span>${dragHandleHtml(emp)}${leaderMarkHtml(emp, AppState.currentFacilityId)}${Security.escapeHtml(emp.name)}${helperTag}${concurrentTag}</span>${badge}</div></td>`;
     days.forEach(d=>{
       const ds=fmtDate(d);
       const shift=shifts.find(s=>s.empId===emp.id&&s.date===ds);
@@ -6039,7 +6301,8 @@ function renderDayGantt(ym) {
 function renderDayWithHours(dateStr, ym) {
   AppState.currentDayDate = dateStr;
   const fid=AppState.currentFacilityId;
-  const emps=filterSortAdminEmps(getVisibleEmployeesForFacility(fid, ym), fid, ym, [dateStr]); // ver.7.5.3 No.5/6
+  let emps=filterSortAdminEmps(getVisibleEmployeesForFacility(fid, ym), fid, ym, [dateStr]); // ver.7.5.3 No.5/6
+  if(AppState.sortByStart) emps=sortEmpsByStart(emps, dateStr, fid, ym); // ver.8.7.0 ①
   const shifts=getShiftsFor(fid,ym);
   const area=document.getElementById('shift-view-area');
   const d=new Date(dateStr+'T00:00:00');
@@ -6109,7 +6372,7 @@ function renderDayWithHours(dateStr, ym) {
       : '';
     const offTag = (shift && shift.isOffDuty) ? `<span class="offduty-tag">${KARA_MARK}${offDutyReqTime(req)||'空き番'}</span>` : ''; // ver.7.8.0 No.11
     const offReq = (shift && shift.isOffDuty && offDutyReqTime(req)) ? req : null;
-    html+=`<tr class="gantt-row"><td class="name-cell">${leaderMarkHtml(emp, AppState.currentFacilityId)}${Security.escapeHtml(emp.name)}${helperTag}${concurrentTag}${pubMarkHtml(shift)}${shift?withdrawnTagHtml(emp.id, dateStr):''}${outOfRangeTagHtml(shift)}${breakBtn}${offTag}</td>`;
+    html+=`<tr class="gantt-row" data-emp="${Security.escapeHtml(emp.id)}"><td class="name-cell">${dragHandleHtml(emp)}${leaderMarkHtml(emp, AppState.currentFacilityId)}${Security.escapeHtml(emp.name)}${helperTag}${concurrentTag}${pubMarkHtml(shift)}${shift?withdrawnTagHtml(emp.id, dateStr):''}${outOfRangeTagHtml(shift)}${breakBtn}${offTag}</td>`;
     for(const h of VIEW_HOURS){
       for(let hf=0;hf<2;hf++){
         const ts=`${String(h).padStart(2,'0')}:${hf===0?'00':'30'}`;
@@ -6242,7 +6505,7 @@ function renderDaysSimple(days, ym) {
     const badge = ep.length>0 ? `<span class="pending-annual-badge" onclick="openAnnualApproveModal('${Security.escapeHtml(emp.id)}','${ym}')" title="未承認の年休希望: ${ep.map(r=>r.date).join('、')}">未承認 ×${ep.length}</span>` : '';
     const helperTag = emp.isHelper ? `<span class="badge badge-blue" style="font-size:9px;flex-shrink:0">他施設</span>` : '';
     const concurrentTag = emp.isConcurrent ? `<span class="badge badge-green" style="font-size:9px;flex-shrink:0" title="兼務施設として登録済み">兼務</span>` : '';
-    html+=`<tr class="gantt-row"><td class="name-cell"><div class="name-cell-inner"><span>${leaderMarkHtml(emp, AppState.currentFacilityId)}${Security.escapeHtml(emp.name)}${helperTag}${concurrentTag}</span>${badge}</div></td>`;
+    html+=`<tr class="gantt-row" data-emp="${Security.escapeHtml(emp.id)}"><td class="name-cell"><div class="name-cell-inner"><span>${dragHandleHtml(emp)}${leaderMarkHtml(emp, AppState.currentFacilityId)}${Security.escapeHtml(emp.name)}${helperTag}${concurrentTag}</span>${badge}</div></td>`;
     days.forEach(d=>{
       const ds=fmtDate(d);
       const shift=shifts.find(s=>s.empId===emp.id&&s.date===ds);
