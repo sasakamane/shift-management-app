@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co;">
-<title>シフト管理システム ver.8.6.4</title>
+<title>シフト管理システム ver.8.6.5</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -653,7 +653,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
         </svg>
       </div>
       <h1>シフト管理システム</h1>
-      <p>Shift Management System ver.8.6.4</p>
+      <p>Shift Management System ver.8.6.5</p>
     </div>
     <div class="form-group">
       <label>従業員番号</label>
@@ -1658,7 +1658,7 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
    以下の2行を自分のプロジェクトの値に書き換えてください
 ================================================================ */
 // アプリのバージョン（大規模改修: x.0.0 / 中規模: 0.x.0 / 小規模: 0.0.x）
-const APP_VERSION = '8.6.4';
+const APP_VERSION = '8.6.5';
 const SUPABASE_URL = 'https://iehxxwhzzwlhqwxqgdph.supabase.co';           // 例: https://xxxxxxxxxx.supabase.co
 const SUPABASE_KEY = 'sb_publishable_frYDQgYp34Gqw90YoleZzg_DeaoWOEb';       // 例: sb_publishable_xxxxxxxxxxxx
 // 追加修正: RLS有効化に伴い、テーブルへは直接アクセスせず、必ずEdge Function（プロキシ）を経由する。
@@ -5690,7 +5690,12 @@ function printWindowHtml(bodyHtml, title, paper) {
 }
 function openPrintWindow(bodyHtml, title, paper) {
   let w=null;
-  try { w=window.open('', '_blank'); } catch(_) { w=null; }
+  // ver.8.6.5: タブではなく別ウィンドウで開く（大きさを指定すると、ブラウザは別ウィンドウとして開く）
+  const sw=(window.screen && screen.availWidth) || 1280, sh=(window.screen && screen.availHeight) || 800;
+  const ww=Math.max(800, Math.round(sw*0.9)), wh=Math.max(600, Math.round(sh*0.9));
+  const wl=Math.max(0, Math.round((sw-ww)/2)), wt=Math.max(0, Math.round((sh-wh)/2));
+  const feat=`popup=yes,width=${ww},height=${wh},left=${wl},top=${wt},scrollbars=yes,resizable=yes`;
+  try { w=window.open('', '_blank', feat); } catch(_) { w=null; }
   if(!w || !w.document) return false;
   try {
     w.opener = null; // 開いたウィンドウから元の画面を操作できないようにする
