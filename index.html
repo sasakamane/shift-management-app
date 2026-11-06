@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co;">
-<title>シフト管理システム ver.8.7.0</title>
+<title>シフト管理システム ver.9.1.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -444,6 +444,43 @@ input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--
   .dlt th.dlt-name,.dlt td.dlt-name{width:84px}
   .dlt{min-width:0}
 }
+/* ver.9.0.0 年休台帳 */
+.lv-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 14px}
+.lv-kpi{flex:1 1 140px;border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;display:flex;flex-direction:column;gap:2px;background:#fff}
+.lv-kpi span{font-size:11px;color:var(--text-muted);font-weight:600}
+.lv-kpi b{font-size:20px;color:var(--primary)}
+.lv-kpi.main{background:var(--primary);border-color:var(--primary)}
+.lv-kpi.main span,.lv-kpi.main small{color:rgba(255,255,255,.75)}
+.lv-kpi.main b{color:#fff;font-size:26px}
+.lv-kpi b.ok{color:#059669}.lv-kpi b.ng{color:#b91c1c}
+.lv-kpi small{font-size:11px;color:var(--text-muted)}
+.lv-warn{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;border-radius:var(--radius);padding:8px 10px;font-size:12px;margin-bottom:12px}
+.lv-table td,.lv-table th,.lv-in td,.lv-in th{font-size:12px;padding:6px 8px}
+.lv-table tr.lv-expired td{color:var(--text-muted)}
+.lv-src{display:inline-block;margin-left:4px;font-size:10px;color:var(--text-muted)}
+.lv-in td small{display:block;font-size:10px;color:var(--text-muted)}
+.lv-in input,.lv-in select{width:100%;font-size:13px}
+.lv-carry{margin:10px 0 14px;font-size:12px}
+.lv-carry input{width:80px;margin:0 4px}
+.lv-carry small{display:block;color:var(--text-muted);font-size:11px;margin-top:2px}
+.lv-sec{font-size:13px;font-weight:700;margin:14px 0 6px;color:var(--text-secondary)}
+.lv-mig-wrap{overflow:auto;max-height:min(60vh,560px);border:1px solid var(--border);border-radius:var(--radius)}
+.lv-mig{min-width:900px}
+.lv-mig th{position:sticky;top:0;z-index:2;background:var(--surface-2);font-size:11px;padding:6px;text-align:center;white-space:nowrap}
+.lv-mig thead tr:nth-child(2) th{top:28px}
+.lv-mig th small{display:block;font-weight:400;color:var(--text-muted)}
+.lv-mig td{font-size:12px;padding:4px 6px;white-space:nowrap}
+.lv-mig td.mono{font-family:'DM Mono',monospace;color:var(--text-muted)}
+.lv-mig select{width:56px;font-size:12px;padding:3px}
+.lv-mig input{width:60px;font-size:12px;padding:3px 4px}
+.lv-mig .lv-g{display:inline-block;margin-left:4px;font-size:10px;color:var(--text-muted);min-width:24px}
+.lv-mig tr.lv-dirty td{background:#fffbeb}
+.lv-mig input.lv-bad{border-color:#dc2626;background:#fef2f2}
+.lv-mig .lv-bal{text-align:right}
+.lv-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}
+.lv-countfrom{font-size:12px;background:var(--surface-2);border-radius:var(--radius);padding:8px 10px;margin-bottom:10px}
+.lv-countfrom input{font-size:12px;margin-left:4px}
+.lv-countfrom small{display:block;color:var(--text-muted);font-size:11px;margin-top:3px}
 /* ver.8.7.0 ①: シフト表で名前をドラッグして並べ替え */
 .drag-h{font-style:normal;display:inline-flex;align-items:center;justify-content:center;min-width:12px;white-space:nowrap;word-break:keep-all;vertical-align:middle;margin-right:3px;color:var(--text-muted);cursor:grab;touch-action:none;user-select:none;font-size:11px;letter-spacing:-2px;flex-shrink:0;opacity:.55}
 .drag-h::before{content:'⋮⋮'}
@@ -668,7 +705,7 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
         </svg>
       </div>
       <h1>シフト管理システム</h1>
-      <p>Shift Management System ver.8.7.0</p>
+      <p>Shift Management System ver.9.1.0</p>
     </div>
     <div class="form-group">
       <label>従業員番号</label>
@@ -897,6 +934,8 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
       <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
         <div><h1 class="page-title">従業員マスタ</h1><p class="page-sub">従業員情報の管理・インポートを行います</p></div>
         <div class="toolbar-group">
+  <button class="btn btn-outline" onclick="openLeaveMigrationModal()" title="年休設定の各項目と2024〜2026年度の取得実績を、施設ごとにまとめて入力します（CSV・エクセルの取り込み可）">年休設定・取得実績の一括入力</button>
+          <button class="btn btn-outline" onclick="exportLeaveLedgerExcel()" title="本日時点の残・付与ごとの台帳・取得日をエクセルで出力します">年休管理簿（Excel）</button>
           <button class="btn btn-primary" onclick="openImportModal()">従業員データインポート</button>
           <button class="btn btn-outline" onclick="openAddEmployeeModal()">手動追加</button>
         </div>
@@ -1335,6 +1374,43 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
 </div>
 
 <!-- 従業員編集 -->
+<!-- ver.9.0.0: 年休台帳（1人分） -->
+<div class="modal-overlay" id="modal-leave-ledger">
+  <div class="modal" style="width:760px">
+    <div class="modal-header"><h3 id="ll-title">年休台帳</h3><button class="modal-close" onclick="closeModal('modal-leave-ledger')">✕</button></div>
+    <div class="modal-body">
+      <div id="ll-hire" style="font-size:12px;color:var(--text-secondary);margin-bottom:8px"></div>
+      <div id="ll-summary"></div>
+      <div class="lv-sec">2024〜2026年度の実績（移行入力）</div>
+      <p style="font-size:11px;color:var(--text-muted);margin:0 0 6px">区分を選ぶと、その年度の付与日数が決まります（「自動」は年休設定から判定）。取得日数は、その年度（4月〜翌3月）に取った日数です。</p>
+      <div id="ll-inputs"></div>
+      <span class="error-msg" id="ll-error" style="display:none"></span>
+      <div class="lv-sec">付与ごとの台帳</div>
+      <div id="ll-ledger"></div>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:6px">取得は、有効期限の早い付与分から順に引いています。付与から2年たった分は期限切れになります。</p>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-leave-ledger')">キャンセル</button><button class="btn btn-primary" onclick="saveLeaveLedger()">保存</button></div>
+  </div>
+</div>
+<!-- ver.9.0.0: 年休の移行入力（施設ごと） -->
+<div class="modal-overlay" id="modal-leave-migration">
+  <div class="modal" style="width:1100px;max-width:96vw">
+    <div class="modal-header"><h3>年休設定・取得実績の一括入力</h3><button class="modal-close" onclick="closeModal('modal-leave-migration')">✕</button></div>
+    <div class="modal-body">
+      <div class="lv-toolbar">
+        <label style="font-size:12px">施設 <select id="lm-facility" onchange="onLeaveMigFacilityChange()"></select></label>
+        <button type="button" class="btn btn-outline btn-sm" onclick="exportLeaveMigrationExcel()">エクセルで書き出し</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="exportLeaveMigrationCsv()">CSVで書き出し</button>
+        <label class="btn btn-outline btn-sm" style="cursor:pointer">エクセル・CSVを取り込み<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importLeaveMigrationExcel(this)"></label>
+        <span id="lm-dirty" style="font-size:12px;color:#b45309;font-weight:700"></span>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin:0 0 8px">「書き出し」で、年休設定の全項目と2024〜2026年度の取得日数が入ったファイルを作れます。記入して「取り込み」で戻すと、従業員番号で照合して反映します（空欄の欄は変更しません。消すときは「-」）。取得日数は下の表でも直接入力できます。年休設定の各項目は、行の「年休設定」から1人ずつ変更できます。<br>2026年度までは入力した取得日数で数え、2027/4/1（完全移行日）からはシフトに入れた年休を自動で数えます。</p>
+      <div class="lv-mig-wrap" id="lm-grid"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-leave-migration')">閉じる</button><button class="btn btn-primary" id="lm-save" onclick="saveLeaveMigration()" disabled>保存</button></div>
+  </div>
+</div>
+
 <!-- ver.8.6.1: 従業員の完全削除（最終手段） -->
 <div class="modal-overlay" id="modal-purge-employee">
   <div class="modal" style="width:520px">
@@ -1403,14 +1479,14 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
         <div>
           <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">判定優先ルール</label>
-          <select id="lp-priority-rule" style="width:100%">
+          <select id="lp-priority-rule" style="width:100%" onchange="previewLeaveProfile()">
             <option value="weekly">週所定労働日数を優先</option>
             <option value="annual">年間所定労働日数を優先</option>
           </select>
         </div>
         <div>
           <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">週所定労働時間（30時間以上でタイプE）</label>
-          <input type="number" id="lp-weekly-hours" min="0" max="80" step="0.5" placeholder="例：32" style="width:100%">
+          <input type="number" id="lp-weekly-hours" min="0" max="80" step="0.5" placeholder="例：32" style="width:100%" oninput="previewLeaveProfile()">
         </div>
       </div>
 
@@ -1437,27 +1513,38 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
           <button class="btn btn-outline btn-sm" onclick="applyLeaveProfileMonthSum()">月別合計を年間所定労働日数に反映</button>
           <div style="flex:1">
             <label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">当年度：年間所定労働日数</label>
-            <input type="number" id="lp-annual-days" min="0" max="366" style="width:140px">
+            <input type="number" id="lp-annual-days" min="0" max="366" style="width:140px" oninput="previewLeaveProfile()">
           </div>
         </div>
       </div>
 
       <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px">
-        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">前年度実績（直近の付与判定に使用）</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">前年度実績<span id="lp-prev-label"></span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-          <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">週所定労働日数</label><input type="number" id="lp-prev-weekly-days" min="0" max="7" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">週所定労働日数</label><input type="number" id="lp-prev-weekly-days" min="0" max="7" style="width:100%" oninput="previewLeaveProfile()"></div>
           <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">年間所定労働日数</label><input type="number" id="lp-prev-annual-days" min="0" max="366" style="width:100%"></div>
           <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">週所定労働時間</label><input type="number" id="lp-prev-weekly-hours" min="0" max="80" step="0.5" style="width:100%"></div>
         </div>
       </div>
 
       <div style="border-top:1px solid var(--border);padding-top:14px">
-        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">前々年度実績（前年度が未入力の場合のフォールバック）</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">前々年度実績<span id="lp-prev2-label"></span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-          <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">週所定労働日数</label><input type="number" id="lp-prev2-weekly-days" min="0" max="7" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">週所定労働日数</label><input type="number" id="lp-prev2-weekly-days" min="0" max="7" style="width:100%" oninput="previewLeaveProfile()"></div>
           <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">年間所定労働日数</label><input type="number" id="lp-prev2-annual-days" min="0" max="366" style="width:100%"></div>
           <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">週所定労働時間</label><input type="number" id="lp-prev2-weekly-hours" min="0" max="80" step="0.5" style="width:100%"></div>
         </div>
+      </div>
+      <!-- ver.9.1.0: 取得実績と本日時点の残 -->
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:6px">
+        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">年休の取得実績（その年度の4月〜翌3月に取った日数）</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+          <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">2024年度</label><input type="number" id="lp-used-2024" min="0" max="60" step="0.5" style="width:100%" oninput="previewLeaveProfile()"></div>
+          <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">2025年度</label><input type="number" id="lp-used-2025" min="0" max="60" step="0.5" style="width:100%" oninput="previewLeaveProfile()"></div>
+          <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">2026年度</label><input type="number" id="lp-used-2026" min="0" max="60" step="0.5" style="width:100%" oninput="previewLeaveProfile()"></div>
+          <div><label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:3px">2024年度はじめの繰越（任意）</label><input type="number" id="lp-carry" min="0" max="40" step="0.5" style="width:100%" oninput="previewLeaveProfile()"></div>
+        </div>
+        <div id="lp-preview" style="margin-top:12px"></div>
       </div>
       <span class="error-msg" id="lp-error" style="display:block;margin-top:12px"></span>
     </div>
@@ -1680,7 +1767,7 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
    以下の2行を自分のプロジェクトの値に書き換えてください
 ================================================================ */
 // アプリのバージョン（大規模改修: x.0.0 / 中規模: 0.x.0 / 小規模: 0.0.x）
-const APP_VERSION = '8.7.0';
+const APP_VERSION = '9.1.0';
 const SUPABASE_URL = 'https://iehxxwhzzwlhqwxqgdph.supabase.co';           // 例: https://xxxxxxxxxx.supabase.co
 const SUPABASE_KEY = 'sb_publishable_frYDQgYp34Gqw90YoleZzg_DeaoWOEb';       // 例: sb_publishable_xxxxxxxxxxxx
 // 追加修正: RLS有効化に伴い、テーブルへは直接アクセスせず、必ずEdge Function（プロキシ）を経由する。
@@ -1947,6 +2034,141 @@ const Leave = {
 };
 
 /* ================================================================
+   ver.9.0.0 年休台帳
+   付与ごとに「付与日・日数・有効期限（2年）」を持ち、取得は有効期限の早い付与分から順に引く。
+   ・付与：入社日と会社のルール（4/1・10/1）から自動。日数は年度ごとの区分（A〜E）で決める。
+           区分が未入力の年度は、これまでの年休設定（週・年間の所定日数など）で自動判定する。
+           年度ごとに付与日数を直接指定することもできる（手動）。
+   ・取得：「数え始める日」（施設ごと・初期値は完全移行日 2027/4/1）より前は、移行入力の「年度ごとの取得日数」。
+           未入力の年度は、システムのシフトに入った年休を数える。
+           数え始める日以降は、シフトの年休（仮確定を除く）を日付ごとに自動で数える。
+   ・残：本日時点で有効期限内の付与分の残りの合計。
+   データ：employees.leave_history（jsonb）
+     {"years":{"2024":{"cat":"B","grant":null,"used":3},...},"carry":2}
+================================================================ */
+const LEAVE_CUTOVER_DEFAULT = '2027-04-01';   // 完全移行日（初期値）
+// システムのシフトで年休を数え始める日（施設ごとに設定。初期値は完全移行日。それより前は移行入力の年度ごとの日数）
+function parseLeaveSettings(v) {
+  let o=v; if(typeof o==='string'){ try { o=JSON.parse(o); } catch(_) { o=null; } }
+  const d=o && typeof o==='object' ? o.countFrom : null;
+  return { countFrom: (typeof d==='string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && d>='2024-04-01' && d<=LEAVE_CUTOVER_DEFAULT) ? d : null };
+}
+function leaveCutover(emp) {
+  const f=AppState.facilities.find(x=>x.id===emp?.facilityId);
+  return f?.leaveSettings?.countFrom || LEAVE_CUTOVER_DEFAULT;
+}
+const LEAVE_HIST_YEARS = [2024, 2025, 2026];  // 移行入力する年度（4月〜翌3月）
+const LEAVE_WINDOW_START = '2024-04-01';      // 台帳で扱う最初の付与日
+const LEAVE_CATS = ['E','A','B','C','D'];
+const LEAVE_CAT_LABEL = { E:'E（週5日以上・週30時間以上）', A:'A（週4日）', B:'B（週3日）', C:'C（週2日）', D:'D（週1日）' };
+function parseLeaveHistory(v) {
+  let o=v;
+  if(typeof o==='string'){ try { o=JSON.parse(o); } catch(_) { o=null; } }
+  const out={ years:{}, carry:null };
+  if(!o || typeof o!=='object' || Array.isArray(o)) return out;
+  const num=(x,max)=>{ if(x===null||x===undefined||x==='') return null; const n=Number(x); return (Number.isFinite(n) && n>=0 && n<=max) ? Math.round(n*2)/2 : null; };
+  LEAVE_HIST_YEARS.forEach(y=>{
+    const h=o.years?.[y] || o.years?.[String(y)];
+    if(!h || typeof h!=='object') return;
+    const cat = LEAVE_CATS.includes(h.cat) ? h.cat : '';
+    const e={ cat, grant:num(h.grant,40), used:num(h.used,60) };
+    if(e.cat || e.grant!=null || e.used!=null) out.years[y]=e;
+  });
+  out.carry=num(o.carry,40);
+  return out;
+}
+function leaveFy(ds) { const y=parseInt(ds.slice(0,4),10), m=parseInt(ds.slice(5,7),10); return m>=4 ? y : y-1; }
+function leaveAddYears(ds, n) { const d=new Date(ds+'T00:00:00'); d.setFullYear(d.getFullYear()+n); d.setDate(d.getDate()-1); return fmtDate(d); }
+// 入社日から、会社ルールでの付与日の一覧（勤続区分idx付き）
+Leave.grantSchedule = function(hireDateStr, untilStr) {
+  if(!hireDateStr) return [];
+  const hd=new Date(hireDateStr+'T00:00:00'), hy=hd.getFullYear(), hm=hd.getMonth();
+  const list=[];
+  if(hm>=3 && hm<=8){ list.push({date:fmtDate(new Date(hy,9,1)), idx:0}); for(let i=1;i<=45;i++) list.push({date:fmtDate(new Date(hy+i,3,1)), idx:Math.min(i,6)}); }
+  else { const ay=(hm>=9)?hy+1:hy; for(let i=0;i<=45;i++) list.push({date:fmtDate(new Date(ay+i,3,1)), idx:Math.min(i,6)}); }
+  return list.filter(g=>g.date<=untilStr);
+};
+// ver.9.1.0: 付与の区分を決める年休設定の年度
+//   初回の付与＝当年度（予定）／今年度の付与＝前年度の実績／それより前の付与＝前々年度の実績（なければ近い年度）
+function leaveProfileForGrant(emp, gdate, firstDate) {
+  const rule=emp.leavePriorityRule||'weekly';
+  const has=(a,b,c)=>a!=null||b!=null||c!=null;
+  const cur={weeklyDays:emp.weeklyDays, annualDays:emp.annualScheduledDays, weeklyHours:emp.weeklyScheduledHours, priorityRule:rule, source:'current'};
+  if(gdate===firstDate) return cur;
+  const prev=has(emp.prevYearWeeklyDays,emp.prevYearAnnualDays,emp.prevYearWeeklyHours) ? {weeklyDays:emp.prevYearWeeklyDays??emp.weeklyDays, annualDays:emp.prevYearAnnualDays, weeklyHours:emp.prevYearWeeklyHours, priorityRule:rule, source:'prevYear'} : null;
+  const prev2=has(emp.prev2YearWeeklyDays,emp.prev2YearAnnualDays,emp.prev2YearWeeklyHours) ? {weeklyDays:emp.prev2YearWeeklyDays??emp.weeklyDays, annualDays:emp.prev2YearAnnualDays, weeklyHours:emp.prev2YearWeeklyHours, priorityRule:rule, source:'prev2Year'} : null;
+  if(leaveFy(gdate)>=leaveFy(fmtDate(new Date()))) return prev||prev2||cur;
+  return prev2||prev||cur;
+}
+// 台帳を組み立てる。usageDates = シフトに入った年休の日付（仮確定を除く）
+Leave.buildLedger = function(emp, usageDates, asOf) {
+  const today = asOf || fmtDate(new Date());
+  const hist = parseLeaveHistory(emp?.leaveHistory);
+  const res = { applicable: !!emp?.hireDate, grants:[], balance:0, overdraw:0, next:null, fiveDay:null, hist, today, warnings:[] };
+  if(!emp?.hireDate) return res;
+  const sched = Leave.grantSchedule(emp.hireDate, '2099-12-31');
+  const firstDate = sched[0]?.date || null;
+  res.next = sched.find(g=>g.date>today)?.date || null;
+  // 付与（台帳の対象は LEAVE_WINDOW_START 以降・本日まで）
+  const active = Leave.getActiveCycle(emp.hireDate, emp, new Date(today+'T00:00:00'));
+  sched.filter(g=>g.date>=LEAVE_WINDOW_START && g.date<=today).forEach(g=>{
+    const fy=leaveFy(g.date), h=hist.years[fy];
+    let days, cat, source;
+    if(h && h.grant!=null){ days=h.grant; cat=h.cat||''; source='manual'; }
+    else if(h && h.cat){ cat=h.cat; days=Leave.GRANT_TABLE[Leave.CATEGORY_TO_WD[cat]][g.idx]; source='cat'; }
+    else if(active && active.grantDate===g.date && emp.leaveOverrideDays!=null && emp.leaveOverrideDays!==''){ days=Number(emp.leaveOverrideDays); cat=''; source='override'; }
+    else {
+      const prof=leaveProfileForGrant(emp, g.date, firstDate); // ver.9.1.0
+      cat=Leave.determineCategory(prof); days=Leave.GRANT_TABLE[Leave.CATEGORY_TO_WD[cat]||5][g.idx]; source='auto';
+    }
+    res.grants.push({ date:g.date, expire:leaveAddYears(g.date,2), days, cat, source, idx:g.idx, fy, used:0 });
+  });
+  // 2024年度はじめの繰越（それ以前の付与分の残。2025/3/31まで有効として扱う）
+  if(hist.carry){ res.grants.unshift({ date:'2023-04-01', expire:'2025-03-31', days:hist.carry, cat:'', source:'carry', idx:null, fy:2023, used:0, label:'2024年度はじめの繰越' }); }
+  // 取得のできごと
+  const events=[];
+  const dates=[...new Set((usageDates||[]).filter(d=>typeof d==='string' && /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort();
+  const cut=leaveCutover(emp);
+  // 年度の取得日数が入力されている年度は、「数え始める日」より前をその日数で数える
+  const manualFy = fy => `${fy}-04-01`<cut && hist.years[fy]?.used!=null;
+  LEAVE_HIST_YEARS.forEach(y=>{
+    const h=hist.years[y];
+    if(manualFy(y) && h.used>0){
+      const fyEnd=`${y+1}-03-31`, before=fmtDate(new Date(new Date(cut+'T00:00:00').getTime()-86400000));
+      let at = fyEnd<before ? fyEnd : before; if(at>today) at=today;
+      events.push({ kind:'fy', fy:y, at, amount:h.used });
+    }
+  });
+  dates.forEach(d=>{ if(d<LEAVE_WINDOW_START || (d<cut && manualFy(leaveFy(d)))) return; events.push({ kind:'day', at:d, amount:1 }); });
+  events.sort((a,b)=>a.at.localeCompare(b.at));
+  res.planned=0;
+  events.forEach(ev=>{
+    if(ev.kind==='day' && ev.at>today){ res.planned+=ev.amount; return; } // 本日より後の年休（予定）は残から引かない
+    let rest=ev.amount;
+    // 使える付与分：年度の合計は「その年度のどこかで有効だった付与分」、日付の取得は「その日に有効な付与分」
+    const usable = ev.kind==='fy'
+      ? res.grants.filter(g=>g.date<=`${ev.fy+1}-03-31` && g.expire>=`${ev.fy}-04-01`)
+      : res.grants.filter(g=>g.date<=ev.at && g.expire>=ev.at);
+    usable.sort((a,b)=>a.expire.localeCompare(b.expire) || a.date.localeCompare(b.date)); // 期限の早い分から
+    for(const g of usable){ if(rest<=0) break; const can=Math.max(0, g.days-g.used); const t=Math.min(can, rest); g.used+=t; rest-=t; }
+    if(rest>0){ res.overdraw+=rest; res.warnings.push(ev.kind==='fy' ? `${ev.fy}年度の取得日数が、使える日数を${rest}日超えています` : `${ev.at} の年休が、使える日数を超えています`); }
+  });
+  res.grants.forEach(g=>{ g.remain=Math.max(0, g.days-g.used); g.expired = g.expire<today; g.future = g.date>today; });
+  res.balance = res.grants.filter(g=>!g.expired && !g.future).reduce((t,g)=>t+g.remain,0);
+  // 年5日の取得義務（10日以上付与された直近の付与から1年間）
+  const g10=[...res.grants].reverse().find(g=>g.source!=='carry' && g.days>=10 && g.date<=today);
+  if(g10){
+    const end=leaveAddYears(g10.date,1);
+    let used=dates.filter(d=>d>=g10.date && d<=end && !(d<cut && manualFy(leaveFy(d)))).length;
+    if(manualFy(g10.fy)) used += hist.years[g10.fy].used; // 年度の合計しか無い年は、その年度の取得日数で見る（目安）
+    res.fiveDay={ from:g10.date, to:end, used:Math.min(used,99), need:5, done: used>=5, approx: manualFy(g10.fy) };
+  }
+  return res;
+};
+// 管理者・スタッフ共通：年休の日付（仮確定を除く）
+function leaveUsageDatesFromRows(rows) { return rows.filter(r=>r.publish_status!=='draft').map(r=>r.date); }
+
+/* ================================================================
    APP STATE
 ================================================================ */
 const AppState = {
@@ -2109,6 +2331,7 @@ async function loadAllData() {
       requestDeadlines: parseRequestDeadlines(f.request_deadlines), // ver.8.1.0 No.15: 申請の締め切り（列が無い環境では空配列）
       staffing: parseStaffing(f.staffing_rule), // ver.8.3.0 ②: 必要人数・営業時間（列が無い環境では未設定）
       display: parseStaffDisplay(f.staff_display), // ver.8.5.0 12/13: 責任者・並び順（列が無い環境では未設定）
+      leaveSettings: parseLeaveSettings(f.leave_settings), // ver.9.0.0: シフトの年休を数え始める日
       // 追加修正: 論理削除フラグ。DBにdeleted_at列が無い環境でも undefined のまま安全に動作する（全員「有効」扱い）
       deletedAt: f.deleted_at||null
     }));
@@ -2117,6 +2340,7 @@ async function loadAllData() {
       hireDate: e.hire_date||null, leaveOverrideDays: (e.leave_override_days!=null?e.leave_override_days:null),
       weeklyDays: e.weekly_work_days||5, updatedAt: e.updated_at||null,
       jobItems: parseJobItems(e.job_items), // ver.7.7.0 No.7: 施設ごとの職種 {facilityId: 個別項目ID}
+      leaveHistory: e.leave_history ?? null, // ver.9.0.0: 年休台帳の移行入力（2024〜2026年度）
       // 追加修正: 論理削除フラグ。DBにdeleted_at列が無い環境でも undefined のまま安全に動作する（全員「有効」扱い）
       deletedAt: e.deleted_at||null,
       // #7 修正: 年休付与ロジックの実績ベース判定に使う項目（DB未追加でもundefinedのまま安全に動作＝法定の週日数基準にフォールバックする）
@@ -3244,24 +3468,26 @@ async function loadAndRenderStaffLeaveBalance() {
     const u=AppState.currentUser;
     const emp=AppState.employees.find(e=>e.id===u.id);
     if(!emp?.hireDate){ card.style.display='none'; return; }
-    const bal=Leave.calcBalance(emp);
-    if(!bal.applicable) { card.style.display='none'; return; }
+    // ver.9.0.0: 年休台帳（繰り越し・2年の期限を含む）で計算する
+    let rows;
+    try { rows = await DB.get('shifts', `?emp_id=eq.${encodeURIComponent(u.id)}&is_annual=eq.true&select=date,publish_status`); }
+    catch(_) { rows = await DB.get('shifts', `?emp_id=eq.${encodeURIComponent(u.id)}&is_annual=eq.true&select=date`); }
+    const L=Leave.buildLedger(emp, leaveUsageDatesFromRows(rows));
     card.style.display='block';
-    if(bal.notYetGranted){
+    const valid=L.grants.filter(g=>!g.expired && !g.future);
+    if(!valid.length && !L.balance){
       document.getElementById('staff-leave-remain').textContent='未付与';
-      document.getElementById('staff-leave-detail').textContent='入社6ヶ月経過後に付与されます';
+      document.getElementById('staff-leave-detail').textContent = L.next ? `${L.next.replace(/-/g,'/')}に付与されます` : '入社6ヶ月経過後に付与されます';
       return;
     }
-    const q = `?emp_id=eq.${encodeURIComponent(u.id)}&is_annual=eq.true&date=gte.${bal.cycle.cycleStart}&date=lte.${bal.cycle.cycleEnd}`;
-    let rows;
-    try { rows = (await DB.get('shifts', q+'&select=date,publish_status')).filter(r=>r.publish_status!=='draft'); } // ver.8.0.0
-    catch(_) { rows = await DB.get('shifts', q+'&select=date'); }
-    const used = rows.length;
-    const remain = Math.max(bal.grantDays-used,0);
-    document.getElementById('staff-leave-remain').textContent = `${remain}日`;
+    const esc=Security.escapeHtml;
+    const soon=valid.filter(g=>g.remain>0).sort((a,b)=>a.expire.localeCompare(b.expire))[0];
+    document.getElementById('staff-leave-remain').textContent = `${L.balance}日`;
     document.getElementById('staff-leave-detail').innerHTML =
-      `付与日数: ${bal.grantDays}日（${Security.escapeHtml(bal.cycle.grantDate)}付与）<br>消化日数: ${used}日` +
-      (bal.cycle.nextGrantDate?`<br>次回付与予定: ${Security.escapeHtml(bal.cycle.nextGrantDate)}`:'');
+      (L.planned?`このほか予定 ${L.planned}日<br>`:'')+valid.map(g=>`${g.source==='carry'?'繰越分':esc(g.date.replace(/-/g,'/'))+'付与'}：残り${g.remain}日（${esc(g.expire.replace(/-/g,'/'))}まで）`).join('<br>')
+      + (soon && valid.length>1 ? `<br><span style="color:#b45309">期限の早い分から使われます</span>` : '')
+      + (L.next?`<br>次回付与予定: ${esc(L.next.replace(/-/g,'/'))}`:'')
+      + (L.fiveDay && !L.fiveDay.done ? `<br>年5日の取得：${L.fiveDay.used}/5日（${esc(L.fiveDay.to.replace(/-/g,'/'))}まで）` : '');
   } catch(err) {
     card.style.display='none';
     Security.log('STAFF_LEAVE_ERR', err.message, 'ERROR');
@@ -3879,12 +4105,399 @@ async function deleteAdminUser(id) {
 async function fetchAnnualLeaveUsageMap() {
   const usage = {}; // empId -> [date, date, ...]
   try {
-    const rows = await DB.get('shifts', `?is_annual=eq.true&select=emp_id,date`);
-    rows.forEach(r=>{ (usage[r.emp_id] ||= []).push(r.date); });
+    // ver.9.0.0: 仮確定（スタッフ未公開）の年休は数えない（スタッフ画面と同じ数え方）
+    let rows;
+    try { rows = await DB.get('shifts', `?is_annual=eq.true&select=emp_id,date,publish_status`); }
+    catch(colErr) { if(!/publish_status/i.test(colErr.message||'')) throw colErr; rows = await DB.get('shifts', `?is_annual=eq.true&select=emp_id,date`); }
+    rows.filter(r=>r.publish_status!=='draft').forEach(r=>{ (usage[r.emp_id] ||= []).push(r.date); });
   } catch(err) {
     Security.log('LEAVE_USAGE_ERR', err.message, 'ERROR');
   }
   return usage;
+}
+
+/* ---------------- ver.9.0.0 年休台帳：画面 ---------------- */
+function leaveHistFromInputs(prefix) {
+  const o={ years:{}, carry:null };
+  LEAVE_HIST_YEARS.forEach(y=>{
+    const cat=document.getElementById(`${prefix}-cat-${y}`)?.value||'';
+    const g=document.getElementById(`${prefix}-grant-${y}`)?.value??'';
+    const u=document.getElementById(`${prefix}-used-${y}`)?.value??'';
+    o.years[y]={ cat, grant: g===''?null:g, used: u===''?null:u };
+  });
+  const c=document.getElementById(`${prefix}-carry`)?.value??'';
+  o.carry = c===''?null:c;
+  return parseLeaveHistory(o);
+}
+function leaveInputProblems(prefix) {
+  const probs=[];
+  const chk=(id,label,max)=>{ const el=document.getElementById(id); if(!el||el.value==='') return; const n=Number(el.value); if(!Number.isFinite(n)||n<0||n>max||Math.round(n*2)!==n*2) probs.push(`${label}は0〜${max}（0.5日単位まで）で入力してください（入力：${el.value}）`); };
+  LEAVE_HIST_YEARS.forEach(y=>{ chk(`${prefix}-grant-${y}`, `${y}年度の付与日数`, 40); chk(`${prefix}-used-${y}`, `${y}年度の取得日数`, 60); });
+  chk(`${prefix}-carry`, '2024年度はじめの繰越', 40);
+  return probs;
+}
+function leaveSourceLabel(g) {
+  return ({manual:'手動', cat:'区分', override:'手動調整', auto:'自動', carry:'繰越'})[g.source]||'';
+}
+function leaveLedgerTableHtml(L) {
+  const esc=Security.escapeHtml;
+  if(!L.grants.length) return '<p style="font-size:12px;color:var(--text-muted);padding:8px 0">2024年4月以降の付与はまだありません。</p>';
+  return `<table class="data-table lv-table"><thead><tr><th>付与日</th><th>区分</th><th style="text-align:right">付与</th><th>有効期限</th><th style="text-align:right">使った日数</th><th style="text-align:right">残</th><th>状態</th></tr></thead><tbody>`
+    + L.grants.map(g=>`<tr class="${g.expired?'lv-expired':''}"><td>${g.source==='carry'?esc(g.label):esc(g.date.replace(/-/g,'/'))}</td>`
+      + `<td>${g.cat?esc(g.cat):'-'}<span class="lv-src">${esc(leaveSourceLabel(g))}</span></td>`
+      + `<td style="text-align:right">${g.days}日</td><td>${esc(g.expire.replace(/-/g,'/'))}まで</td>`
+      + `<td style="text-align:right">${g.used}日</td><td style="text-align:right;font-weight:700">${g.expired?'<span style="color:var(--text-muted)">（失効 '+g.remain+'日）</span>':g.remain+'日'}</td>`
+      + `<td>${g.expired?'<span class="badge badge-gray">期限切れ</span>':'<span class="badge badge-green">有効</span>'}</td></tr>`).join('')
+    + '</tbody></table>';
+}
+function leaveSummaryHtml(L) {
+  const esc=Security.escapeHtml;
+  const soon=L.grants.filter(g=>!g.expired && g.remain>0).sort((a,b)=>a.expire.localeCompare(b.expire))[0];
+  const five = L.fiveDay ? `<div class="lv-kpi"><span>年5日の取得義務</span><b class="${L.fiveDay.done?'ok':'ng'}">${L.fiveDay.used}/5日</b><small>${esc(L.fiveDay.from.replace(/-/g,'/'))}〜${esc(L.fiveDay.to.replace(/-/g,'/'))}${L.fiveDay.approx?'（年度の合計で判定）':''}</small></div>` : '';
+  return `<div class="lv-kpis"><div class="lv-kpi main"><span>本日時点の残</span><b>${L.balance}日</b><small>${esc(L.today.replace(/-/g,'/'))}現在${L.planned?`（このほか予定 ${L.planned}日）`:''}</small></div>`
+    + (soon ? `<div class="lv-kpi"><span>期限が早い分</span><b>${soon.remain}日</b><small>${esc(soon.expire.replace(/-/g,'/'))}まで</small></div>` : '')
+    + `<div class="lv-kpi"><span>次回の付与</span><b>${L.next?esc(L.next.replace(/-/g,'/')):'-'}</b><small>会社ルール（4/1・10/1）</small></div>`
+    + five + '</div>'
+    + (L.warnings.length ? `<div class="lv-warn">${L.warnings.map(w=>esc(w)).join('<br>')}</div>` : '');
+}
+// 1人分の台帳
+async function openLeaveLedgerModal(id) {
+  if(!Auth.requireAdmin()) return;
+  id=Security.sanitizeStr(id,64);
+  const e=AppState.employees.find(x=>x.id===id); if(!e){ showNotif('従業員が見つかりません','error'); return; }
+  if(!AppState._leaveUsageMap) AppState._leaveUsageMap = await fetchAnnualLeaveUsageMap();
+  AppState.leaveLedgerEmp=id;
+  const esc=Security.escapeHtml;
+  const h=parseLeaveHistory(e.leaveHistory);
+  document.getElementById('ll-title').textContent=`年休台帳 - ${e.name}（${e.id}）`;
+  document.getElementById('ll-hire').textContent = e.hireDate ? `入社日 ${e.hireDate.replace(/-/g,'/')}` : '入社日が未登録のため計算できません（従業員の編集で登録してください）';
+  const opt=(sel)=>`<option value=""${!sel?' selected':''}>自動</option>`+LEAVE_CATS.map(c=>`<option value="${c}"${c===sel?' selected':''}>${esc(LEAVE_CAT_LABEL[c])}</option>`).join('');
+  document.getElementById('ll-inputs').innerHTML =
+    `<table class="data-table lv-in"><thead><tr><th>年度</th><th>区分</th><th>付与日数（直接指定・任意）</th><th>取得日数</th></tr></thead><tbody>`
+    + LEAVE_HIST_YEARS.map(y=>{ const v=h.years[y]||{}; return `<tr><td>${y}年度<small>${y}/4〜${y+1}/3</small></td>`
+      + `<td><select id="ll-cat-${y}" onchange="previewLeaveLedger()">${opt(v.cat||'')}</select></td>`
+      + `<td><input type="number" id="ll-grant-${y}" min="0" max="40" step="0.5" value="${v.grant??''}" placeholder="区分から自動" oninput="previewLeaveLedger()"></td>`
+      + `<td><input type="number" id="ll-used-${y}" min="0" max="60" step="0.5" value="${v.used??''}" placeholder="未入力" oninput="previewLeaveLedger()"></td></tr>`; }).join('')
+    + `</tbody></table><div class="lv-carry"><label>2024年度はじめの繰越（任意）<input type="number" id="ll-carry" min="0" max="40" step="0.5" value="${h.carry??''}" oninput="previewLeaveLedger()"> 日</label><small>2024年3月以前に付与され、2024年4月時点で残っていた日数がわかる場合に入力します。</small></div>`;
+  document.getElementById('ll-error').style.display='none';
+  previewLeaveLedger();
+  openModal('modal-leave-ledger');
+}
+function previewLeaveLedger() {
+  const e=AppState.employees.find(x=>x.id===AppState.leaveLedgerEmp); if(!e) return;
+  const probs=leaveInputProblems('ll');
+  const err=document.getElementById('ll-error');
+  if(probs.length){ err.innerHTML=probs.map(p=>Security.escapeHtml(p)).join('<br>'); err.style.display='block'; }
+  else err.style.display='none';
+  const L=Leave.buildLedger({...e, leaveHistory:leaveHistFromInputs('ll')}, (AppState._leaveUsageMap||{})[e.id]||[]);
+  // 自動の付与日数を、入力欄の目安として出す
+  LEAVE_HIST_YEARS.forEach(y=>{ const g=L.grants.find(x=>x.fy===y && x.source!=='carry'); const el=document.getElementById(`ll-grant-${y}`); if(el) el.placeholder = g ? `自動：${g.days}日（${g.date.slice(5).replace('-','/')}付与）` : '付与なし'; });
+  document.getElementById('ll-summary').innerHTML = e.hireDate ? leaveSummaryHtml(L) : '';
+  document.getElementById('ll-ledger').innerHTML = e.hireDate ? leaveLedgerTableHtml(L) : '';
+}
+async function saveLeaveHistoryFor(id, hist) {
+  await DB.patch('employees', {leave_history: hist, updated_at: new Date().toISOString()}, `?id=eq.${encodeURIComponent(id)}`);
+  const e=AppState.employees.find(x=>x.id===id); if(e) e.leaveHistory=hist;
+}
+function leaveSaveErrMsg(err) {
+  if(/leave_history/i.test(err?.message||'') && /column|schema cache/i.test(err?.message||'')) return '年休台帳を保存する列がDBに未追加です。SupabaseでSQL（ver.9.1.0 年休台帳）を実行してください';
+  return `保存に失敗しました（原因：${Security.sanitizeStr(err?.message||'',160)}）`;
+}
+async function saveLeaveLedger() {
+  if(!Auth.requireAdmin()) return;
+  const id=AppState.leaveLedgerEmp; if(!id) return;
+  const probs=leaveInputProblems('ll'); if(probs.length){ previewLeaveLedger(); return; }
+  const hist=leaveHistFromInputs('ll');
+  showLoading('保存中...');
+  try {
+    await saveLeaveHistoryFor(id, hist);
+    Security.log('LEAVE_HISTORY_SAVE', `${id} ${JSON.stringify(hist)}`);
+    closeModal('modal-leave-ledger');
+    renderEmployeeTable();
+    showNotif('年休台帳を保存しました','success');
+  } catch(err) {
+    Security.log('LEAVE_HISTORY_SAVE_ERR', err.message, 'ERROR');
+    const el=document.getElementById('ll-error'); el.textContent=leaveSaveErrMsg(err); el.style.display='block';
+  } finally { hideLoading(); }
+}
+
+// ver.9.1.0 年休設定・取得実績の一括入力（施設ごと。CSV・エクセルで書き出し／取り込み、画面で直接入力）
+const LEAVE_PROFILE_COLS = [
+  // [CSVの見出し, 従業員データの項目, DBの列, 種類, 最小, 最大]
+  ['判定優先ルール', 'leavePriorityRule', 'leave_priority_rule', 'rule'],
+  ['週所定労働時間', 'weeklyScheduledHours', 'weekly_scheduled_hours', 'half', 0, 80],
+  ['当年度 年間所定労働日数', 'annualScheduledDays', 'annual_scheduled_days', 'int', 0, 366],
+  ...Array.from({length:12},(_,i)=>[`当年度 ${i+1}月の所定労働日数`, `month${i+1}`, null, 'int', 0, 31]),
+  ['前年度 週所定労働日数', 'prevYearWeeklyDays', 'prev_year_weekly_days', 'int', 0, 7],
+  ['前年度 年間所定労働日数', 'prevYearAnnualDays', 'prev_year_annual_days', 'int', 0, 366],
+  ['前年度 週所定労働時間', 'prevYearWeeklyHours', 'prev_year_weekly_hours', 'half', 0, 80],
+  ['前々年度 週所定労働日数', 'prev2YearWeeklyDays', 'prev2_year_weekly_days', 'int', 0, 7],
+  ['前々年度 年間所定労働日数', 'prev2YearAnnualDays', 'prev2_year_annual_days', 'int', 0, 366],
+  ['前々年度 週所定労働時間', 'prev2YearWeeklyHours', 'prev2_year_weekly_hours', 'half', 0, 80],
+];
+const LEAVE_USED_COLS = [ ...LEAVE_HIST_YEARS.map(y=>[`${y}年度 取得日数`, y, 60]), ['2024年度はじめの繰越', 'carry', 40] ];
+const LEAVE_MIG_HEAD = ['従業員番号','氏名（参考）','所属（参考）', ...LEAVE_PROFILE_COLS.map(c=>c[0]), ...LEAVE_USED_COLS.map(c=>c[0]), '本日の残（参考）'];
+function leaveEmpView(e) { // 未保存の変更を反映した従業員データ
+  const d=AppState.leaveMigDirty?.[e.id];
+  if(!d) return e;
+  return { ...e, ...(d.profile||{}), leaveHistory: d.hist ?? e.leaveHistory };
+}
+function leaveProfileCell(e, key) {
+  if(key==='leavePriorityRule') return e.leavePriorityRule==='annual' ? '年間所定日数' : '週所定日数';
+  const m=/^month(\d+)$/.exec(key);
+  if(m){ const arr=Array.isArray(e.monthlyScheduledDays)?e.monthlyScheduledDays:[]; const v=arr[Number(m[1])-1]; return v==null?'':v; }
+  return e[key]==null ? '' : e[key];
+}
+function leaveMigTargets() {
+  const fid=document.getElementById('lm-facility')?.value||'';
+  return AppState.employees.filter(e=>!e.deletedAt && (!fid || getEmployeeFacilityIds(e).includes(fid)))
+    .sort((a,b)=>(a.facilityId||'').localeCompare(b.facilityId||'') || a.id.localeCompare(b.id,'ja',{numeric:true}));
+}
+async function openLeaveMigrationModal() {
+  if(!Auth.requireAdmin()) return;
+  if(!AppState._leaveUsageMap) AppState._leaveUsageMap = await fetchAnnualLeaveUsageMap();
+  AppState.leaveMigDirty = {};
+  const sel=document.getElementById('lm-facility');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">すべての施設</option>'+AppState.facilities.filter(f=>!f.deletedAt).map(f=>`<option value="${Security.escapeHtml(f.id)}">${Security.escapeHtml(f.name)}</option>`).join('');
+  sel.value = cur && AppState.facilities.some(f=>f.id===cur) ? cur : (AppState.currentFacilityId||'');
+  renderLeaveMigration();
+  openModal('modal-leave-migration');
+}
+function renderLeaveMigration() {
+  const esc=Security.escapeHtml;
+  const emps=leaveMigTargets();
+  let h=`<table class="data-table lv-mig"><thead><tr><th>番号</th><th>氏名</th><th>入社日</th><th>判定</th><th>週時間</th><th>年間日数<small>当年度</small></th><th>年間日数<small>前年度</small></th>`
+    + LEAVE_HIST_YEARS.map(y=>`<th>${y}年度<small>取得日数</small></th>`).join('') + `<th>繰越<small>任意</small></th><th>今年度の付与</th><th>本日の残</th><th></th></tr></thead><tbody>`;
+  if(!emps.length) h+=`<tr><td colspan="${11+LEAVE_HIST_YEARS.length}" style="text-align:center;color:var(--text-muted);padding:30px">対象の従業員がいません</td></tr>`;
+  emps.forEach(e0=>{
+    const e=leaveEmpView(e0);
+    const hist=parseLeaveHistory(e.leaveHistory);
+    const L=e.hireDate ? Leave.buildLedger(e, (AppState._leaveUsageMap||{})[e.id]||[]) : null;
+    const last=L ? [...L.grants].reverse().find(g=>g.source!=='carry' && !g.future) : null;
+    const k=esc(e.id);
+    h+=`<tr data-emp="${k}" class="${AppState.leaveMigDirty[e.id]?'lv-dirty':''}"><td class="mono">${k}</td><td>${esc(e.name)}</td><td>${e.hireDate?esc(e.hireDate.replace(/-/g,'/')):'<span style="color:var(--danger)">未登録</span>'}</td>`
+      + `<td>${e.leavePriorityRule==='annual'?'年間':'週'}</td><td>${e.weeklyScheduledHours??'-'}</td><td>${e.annualScheduledDays??'-'}</td><td>${e.prevYearAnnualDays??'-'}</td>`
+      + LEAVE_HIST_YEARS.map(y=>`<td><input type="number" data-k="used" data-y="${y}" min="0" max="60" step="0.5" value="${hist.years[y]?.used??''}" oninput="onLeaveMigInput(this)" aria-label="${y}年度の取得日数"></td>`).join('')
+      + `<td><input type="number" data-k="carry" min="0" max="40" step="0.5" value="${hist.carry??''}" oninput="onLeaveMigInput(this)" aria-label="繰越"></td>`
+      + `<td class="lv-grant">${last?`${last.days}日<small class="lv-g">${last.cat||''}</small>`:'-'}</td>`
+      + `<td class="lv-bal">${L?`<b>${L.balance}日</b>${L.overdraw?'<span class="badge badge-red" title="'+esc(L.warnings.join(' / '))+'">超過</span>':''}`:'-'}</td>`
+      + `<td><button type="button" class="btn btn-outline btn-sm" onclick="openLeaveProfileModal('${k}')">設定</button></td></tr>`;
+  });
+  h+='</tbody></table>';
+  document.getElementById('lm-grid').innerHTML=h;
+  syncLeaveMigCount();
+}
+function onLeaveMigInput(el) {
+  const tr=el.closest('tr'); const id=tr?.dataset.emp; const e0=AppState.employees.find(x=>x.id===id); if(!e0) return;
+  if(el.value!==''){ const n=Number(el.value); if(!Number.isFinite(n)||n<0||n>Number(el.max)||Math.round(n*2)!==n*2){ el.classList.add('lv-bad'); return; } }
+  el.classList.remove('lv-bad');
+  const d=AppState.leaveMigDirty[id] || (AppState.leaveMigDirty[id]={});
+  const cur=parseLeaveHistory(d.hist ?? e0.leaveHistory);
+  const raw={ years:{}, carry:cur.carry };
+  LEAVE_HIST_YEARS.forEach(y=>{ raw.years[y]={...(cur.years[y]||{})}; });
+  if(el.dataset.k==='carry') raw.carry = el.value===''?null:el.value;
+  else raw.years[el.dataset.y].used = el.value===''?null:el.value;
+  d.hist=parseLeaveHistory(raw);
+  tr.classList.add('lv-dirty');
+  const e=leaveEmpView(e0);
+  if(e.hireDate){
+    const L=Leave.buildLedger(e, (AppState._leaveUsageMap||{})[e.id]||[]);
+    tr.querySelector('.lv-bal').innerHTML=`<b>${L.balance}日</b>${L.overdraw?'<span class="badge badge-red">超過</span>':''}`;
+  }
+  syncLeaveMigCount();
+}
+function syncLeaveMigCount() {
+  const n=Object.keys(AppState.leaveMigDirty||{}).length;
+  document.getElementById('lm-dirty').textContent = n ? `変更 ${n}名（未保存）` : '';
+  document.getElementById('lm-save').disabled = !n;
+}
+function onLeaveMigFacilityChange() { renderLeaveMigration(); }
+function leaveProfilePayload(p) { // 画面・取り込みの値 → DBの列
+  const out={};
+  LEAVE_PROFILE_COLS.forEach(([,key,col])=>{ if(col && Object.prototype.hasOwnProperty.call(p,key)) out[col]=p[key]; });
+  if(Object.prototype.hasOwnProperty.call(p,'monthlyScheduledDays')) out.monthly_scheduled_days=JSON.stringify(p.monthlyScheduledDays);
+  return out;
+}
+async function saveLeaveMigration() {
+  if(!Auth.requireAdmin()) return;
+  const ids=Object.keys(AppState.leaveMigDirty||{}); if(!ids.length) return;
+  if(document.querySelector('#lm-grid .lv-bad')){ showNotif('赤枠の欄の数値を直してください（0.5日単位）','error'); return; }
+  showLoading(`保存中...（${ids.length}名）`);
+  const failed=[];
+  await runLimited(ids, async id=>{
+    const d=AppState.leaveMigDirty[id];
+    const payload={ ...leaveProfilePayload(d.profile||{}), updated_at:new Date().toISOString() };
+    if(d.hist) payload.leave_history=d.hist;
+    try {
+      await DB.patch('employees', payload, `?id=eq.${encodeURIComponent(id)}`);
+      const e=AppState.employees.find(x=>x.id===id);
+      if(e){ Object.assign(e, d.profile||{}); if(d.hist) e.leaveHistory=d.hist; e.updatedAt=payload.updated_at; }
+      delete AppState.leaveMigDirty[id];
+    } catch(err){ failed.push({id, err}); }
+  }, 4);
+  hideLoading();
+  Security.log('LEAVE_MIGRATION_SAVE', `ok:${ids.length-failed.length} ng:${failed.length}`);
+  renderLeaveMigration(); renderEmployeeTable();
+  if(failed.length) showNotif(`${failed.length}名分を保存できませんでした：${leaveSaveErrMsg(failed[0].err)}`,'error');
+  else showNotif(`${ids.length}名分を保存しました`,'success');
+}
+function leaveMigRows() {
+  const rows=[LEAVE_MIG_HEAD];
+  leaveMigTargets().forEach(e0=>{
+    const e=leaveEmpView(e0);
+    const hist=parseLeaveHistory(e.leaveHistory);
+    const L=e.hireDate ? Leave.buildLedger(e, (AppState._leaveUsageMap||{})[e.id]||[]) : null;
+    rows.push([e.id, e.name, AppState.facilities.find(f=>f.id===e.facilityId)?.name||'',
+      ...LEAVE_PROFILE_COLS.map(([,key])=>leaveProfileCell(e,key)),
+      ...LEAVE_USED_COLS.map(([,y])=> y==='carry' ? (hist.carry??'') : (hist.years[y]?.used??'')),
+      L?L.balance:'']);
+  });
+  return rows;
+}
+function leaveMigFileName(ext) {
+  const fid=document.getElementById('lm-facility')?.value||'';
+  return `年休設定_取得実績_${fid?(AppState.facilities.find(f=>f.id===fid)?.name||''):'全施設'}_${fmtDate(new Date())}.${ext}`.replace(/[\\/:*?"<>|]/g,'_');
+}
+function exportLeaveMigrationExcel() {
+  const rows=leaveMigRows();
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=rows[0].map((_,i)=>({wch:i===1?14:(i<3?10:12)}));
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '年休設定と取得実績');
+  const note=[['入力のしかた'],
+    ['・従業員番号で照合して取り込みます。氏名・所属・本日の残は参考です（取り込みでは使いません）'],
+    ['・空欄の欄は変更しません。値を消したいときは「-」（半角ハイフン）を入れてください'],
+    ['・判定優先ルール：「週所定日数」または「年間所定日数」'],
+    ['・週所定労働時間：0〜80（0.5時間単位まで）／週所定労働日数：0〜7／年間所定労働日数：0〜366／月の所定労働日数：0〜31（整数）'],
+    ['・取得日数：その年度（4月〜翌3月）に取った年休の日数。0.5日単位まで（0〜60）'],
+    ['・繰越：2024年4月時点で残っていた、それ以前の付与分（わかる場合だけ。0〜40）'],
+    ['・付与日数は、入社日と年休設定（区分）から自動で計算します']];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(note), '説明');
+  XLSX.writeFile(wb, leaveMigFileName('xlsx'));
+  Security.log('LEAVE_MIGRATION_EXPORT', document.getElementById('lm-facility')?.value||'all');
+}
+function exportLeaveMigrationCsv() {
+  const rows=leaveMigRows();
+  const csv='﻿'+rows.map(r=>r.map(v=>{ const t=String(v??''); return /[",\r\n]/.test(t) ? `"${t.replace(/"/g,'""')}"` : t; }).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=leaveMigFileName('csv');
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  Security.log('LEAVE_MIGRATION_EXPORT_CSV', document.getElementById('lm-facility')?.value||'all');
+}
+function importLeaveMigrationExcel(input) {
+  const file=input.files?.[0]; input.value='';
+  if(!file) return;
+  if(file.size>5*1024*1024){ showNotif('ファイルが大きすぎます（5MBまで）','error'); return; }
+  const isCsv=/\.csv$/i.test(file.name);
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    try {
+      let wb;
+      if(isCsv){
+        // CSV：UTF-8 で読めなければ Shift_JIS（エクセルで保存したCSV）として読む
+        const buf=new Uint8Array(ev.target.result);
+        let text;
+        try { text=new TextDecoder('utf-8',{fatal:true}).decode(buf); }
+        catch(_) { text=new TextDecoder('shift_jis').decode(buf); }
+        wb=XLSX.read(text.replace(/^﻿/,''),{type:'string', raw:true});
+      } else wb=XLSX.read(ev.target.result,{type:'array'});
+      const ws=wb.Sheets['年休設定と取得実績'] || wb.Sheets[wb.SheetNames[0]];
+      applyLeaveMigrationRows(XLSX.utils.sheet_to_json(ws,{header:1, defval:'', raw:false}));
+    } catch(err) {
+      Security.log('LEAVE_MIGRATION_IMPORT_ERR', err.message, 'ERROR');
+      showNotif('ファイルを読み込めませんでした（書き出した形のまま使ってください）','error');
+    }
+  };
+  rd.readAsArrayBuffer(file);
+}
+function applyLeaveMigrationRows(rows) {
+  const head=(rows[0]||[]).map(x=>String(x).trim());
+  const col=name=>head.indexOf(name);
+  if(col('従業員番号')<0){ showNotif('「従業員番号」の列が見つかりません（書き出した形のまま使ってください）','error'); return { ok:0, unknown:[], bad:[] }; }
+  const unknown=[], bad=[]; let ok=0;
+  rows.slice(1).forEach((r,i)=>{
+    const id=String(r[col('従業員番号')]??'').trim(); if(!id) return;
+    const e0=AppState.employees.find(x=>x.id===id && !x.deletedAt);
+    if(!e0){ unknown.push(id); return; }
+    const e=leaveEmpView(e0);
+    const probs=[]; const profile={}; let months=null;
+    const cell=name=>{ const c=col(name); if(c<0) return undefined; const v=String(r[c]??'').trim(); return v===''?undefined:v; };
+    LEAVE_PROFILE_COLS.forEach(([label,key,,type,min,max])=>{
+      const v=cell(label); if(v===undefined) return; // 空欄は変更しない
+      let val;
+      if(v==='-') val=null;
+      else if(type==='rule'){
+        if(/年間/.test(v) || v==='annual') val='annual'; else if(/週/.test(v) || v==='weekly') val='weekly';
+        else { probs.push(`${label}「${v}」`); return; }
+      } else {
+        const n=Number(v.replace(/,/g,''));
+        if(!Number.isFinite(n) || n<min || n>max || (type==='int' ? !Number.isInteger(n) : Math.round(n*2)!==n*2)){ probs.push(`${label}「${v}」`); return; }
+        val=n;
+      }
+      const m=/^month(\d+)$/.exec(key);
+      if(m){ if(!months) months=(Array.isArray(e.monthlyScheduledDays)?[...e.monthlyScheduledDays]:Array(12).fill(null)); months[Number(m[1])-1]=val; }
+      else profile[key]= key==='leavePriorityRule' ? (val||'weekly') : val;
+    });
+    if(months) profile.monthlyScheduledDays=months;
+    const cur=parseLeaveHistory(e.leaveHistory);
+    const raw={ years:{}, carry:cur.carry }; LEAVE_HIST_YEARS.forEach(y=>{ raw.years[y]={...(cur.years[y]||{})}; });
+    let histChanged=false;
+    LEAVE_USED_COLS.forEach(([label,y,max])=>{
+      const v=cell(label); if(v===undefined) return;
+      let val=null;
+      if(v!=='-'){ const n=Number(v); if(!Number.isFinite(n)||n<0||n>max||Math.round(n*2)!==n*2){ probs.push(`${label}「${v}」`); return; } val=n; }
+      if(y==='carry') raw.carry=val; else raw.years[y].used=val;
+      histChanged=true;
+    });
+    if(probs.length){ bad.push(`${id}（${i+2}行目：${probs.slice(0,3).join('、')}）`); return; }
+    if(!Object.keys(profile).length && !histChanged) return;
+    const d=AppState.leaveMigDirty[id] || (AppState.leaveMigDirty[id]={});
+    if(Object.keys(profile).length) d.profile={...(d.profile||{}), ...profile};
+    if(histChanged) d.hist=parseLeaveHistory(raw);
+    ok++;
+  });
+  renderLeaveMigration();
+  Security.log('LEAVE_MIGRATION_IMPORT', `ok:${ok} unknown:${unknown.length} bad:${bad.length}`);
+  const msg=[`${ok}名分を読み込みました（まだ保存されていません。内容を確認して「保存」を押してください）`];
+  if(unknown.length) msg.push(`従業員番号が見つからない行：${unknown.slice(0,10).join('、')}${unknown.length>10?` ほか${unknown.length-10}件`:''}`);
+  if(bad.length) msg.push(`値が正しくない行（その行は読み込んでいません）：${bad.slice(0,5).join('、')}${bad.length>5?` ほか${bad.length-5}件`:''}`);
+  showNotif(msg.join(' ／ '), (unknown.length||bad.length)?'error':'success');
+  AppState.leaveMigLastImport={ ok, unknown, bad };
+  return { ok, unknown, bad };
+}
+
+// 年次有給休暇管理簿（エクセル）
+async function exportLeaveLedgerExcel() {
+  if(!Auth.requireAdmin()) return;
+  showLoading('管理簿を作成中...');
+  try {
+    AppState._leaveUsageMap = await fetchAnnualLeaveUsageMap();
+    const sum=[['従業員番号','氏名','所属','入社日','本日時点の残','期限が早い分','その期限','次回の付与','年5日（取得/5日）','年5日の対象期間','注意']];
+    const det=[['従業員番号','氏名','付与日','区分','付与日数','有効期限','使った日数','残','状態','付与日数の決め方']];
+    const days=[['従業員番号','氏名','年休の日付（システム記録・仮確定を除く）']];
+    AppState.employees.filter(e=>!e.deletedAt).sort((a,b)=>a.id.localeCompare(b.id,'ja',{numeric:true})).forEach(e=>{
+      const fac=AppState.facilities.find(f=>f.id===e.facilityId)?.name||'';
+      const used=(AppState._leaveUsageMap[e.id]||[]);
+      if(!e.hireDate){ sum.push([e.id,e.name,fac,'','','','','','','','入社日が未登録']); return; }
+      const L=Leave.buildLedger(e, used);
+      const soon=L.grants.filter(g=>!g.expired && g.remain>0).sort((a,b)=>a.expire.localeCompare(b.expire))[0];
+      sum.push([e.id,e.name,fac,e.hireDate,L.balance, soon?soon.remain:'', soon?soon.expire:'', L.next||'', L.fiveDay?`${L.fiveDay.used}/5`:'対象外', L.fiveDay?`${L.fiveDay.from}〜${L.fiveDay.to}`:'', L.warnings.join(' / ')]);
+      L.grants.forEach(g=>det.push([e.id,e.name, g.source==='carry'?g.label:g.date, g.cat||'', g.days, g.expire, g.used, g.remain, g.expired?'期限切れ':'有効', leaveSourceLabel(g)]));
+      const ds=[...new Set(used)].sort(); if(ds.length) days.push([e.id,e.name,ds.join('、')]);
+    });
+    const wb=XLSX.utils.book_new();
+    const s1=XLSX.utils.aoa_to_sheet(sum); s1['!cols']=[{wch:10},{wch:14},{wch:12},{wch:11},{wch:10},{wch:10},{wch:11},{wch:11},{wch:12},{wch:24},{wch:40}];
+    const s2=XLSX.utils.aoa_to_sheet(det); s2['!cols']=[{wch:10},{wch:14},{wch:16},{wch:6},{wch:8},{wch:11},{wch:10},{wch:6},{wch:8},{wch:12}];
+    const s3=XLSX.utils.aoa_to_sheet(days); s3['!cols']=[{wch:10},{wch:14},{wch:100}];
+    XLSX.utils.book_append_sheet(wb, s1, '本日時点の残');
+    XLSX.utils.book_append_sheet(wb, s2, '付与ごとの台帳');
+    XLSX.utils.book_append_sheet(wb, s3, '取得日');
+    XLSX.writeFile(wb, `年次有給休暇管理簿_${fmtDate(new Date())}.xlsx`);
+    Security.log('LEAVE_LEDGER_EXPORT', String(sum.length-1));
+  } catch(err) {
+    Security.log('LEAVE_LEDGER_EXPORT_ERR', err.message, 'ERROR');
+    showNotif('管理簿の作成に失敗しました','error');
+  } finally { hideLoading(); }
 }
 
 function renderEmployeeTable() {
@@ -3938,8 +4551,20 @@ function renderEmployeeTable() {
       return ` <span class="badge badge-green" style="font-size:9px" title="職種${multi?`（${Security.escapeHtml(fn)}）`:''}">${Security.escapeHtml(jn)}</span>`;
     }).join('');
     const tr = document.createElement('tr');
-    const bal = Leave.calcBalance(e);
+    // ver.9.0.0: 年休台帳（付与ごと・2年の期限・繰り越しを含む）で計算する
     let grantCell='<span style="color:var(--text-muted)">-</span>', remainCell='<span style="color:var(--text-muted)">-</span>';
+    const L = e.hireDate ? Leave.buildLedger(e, usageMap[e.id]||[]) : null;
+    const lastG = L ? [...L.grants].reverse().find(g=>g.source!=='carry' && !g.future) : null;
+    if(L && lastG){
+      const srcBadge = lastG.source==='auto' ? ` <span class="badge badge-gray" style="font-size:10px">${lastG.cat}区分</span>` : ` <span class="badge badge-blue" style="font-size:10px">${lastG.source==='cat'?lastG.cat+'区分':'手動'}</span>`;
+      grantCell = `${lastG.days}日${srcBadge}`;
+      remainCell = `<span class="badge ${L.balance<=3?'badge-red':'badge-green'}" title="本日時点（有効期限内の合計）">${L.balance}日</span>`
+        + (L.fiveDay && !L.fiveDay.done ? ` <span class="badge badge-red" style="font-size:9px" title="年5日の取得義務：${L.fiveDay.used}/5日（${L.fiveDay.to}まで）">5日 ${L.fiveDay.used}/5</span>` : '')
+        + (L.overdraw ? ` <span class="badge badge-red" style="font-size:9px" title="${Security.escapeHtml(L.warnings.join(' / '))}">超過</span>` : '');
+    } else if(L){
+      grantCell='<span style="color:var(--text-muted)">未付与</span>';
+    }
+    const bal = { applicable:false }; // 旧計算（下の処理は使わない）
     if(bal.applicable && !bal.notYetGranted){
       const used = (usageMap[e.id]||[]).filter(d=>d>=bal.cycle.cycleStart && d<=bal.cycle.cycleEnd).length;
       const remain = Math.max(bal.grantDays-used,0);
@@ -3956,7 +4581,7 @@ function renderEmployeeTable() {
     const nameCell = e.deletedAt ? `${Security.escapeHtml(e.name)} <span class="badge badge-gray" style="font-size:9px">無効化済み</span>` : Security.escapeHtml(e.name);
     const actionsCell = e.deletedAt
       ? `<button class="btn btn-outline btn-sm" onclick="restoreEmployee('${Security.escapeHtml(e.id)}')">復元</button> <button class="btn btn-danger-outline btn-sm" onclick="openPurgeEmployeeModal('${Security.escapeHtml(e.id)}')" title="データベースから完全に削除します（元に戻せません）">完全に削除</button>`
-      : `<button class="btn btn-outline btn-sm" onclick="openEditEmployeeModal('${Security.escapeHtml(e.id)}')">編集</button> <button class="btn btn-outline btn-sm" onclick="openLeaveProfileModal('${Security.escapeHtml(e.id)}')">年休設定</button> <button class="btn btn-outline btn-sm" onclick="deleteEmployee('${Security.escapeHtml(e.id)}')" title="一覧から非表示にします（記録は残ります）">無効化</button>`;
+      : `<button class="btn btn-outline btn-sm" onclick="openEditEmployeeModal('${Security.escapeHtml(e.id)}')">編集</button> <button class="btn btn-outline btn-sm" onclick="openLeaveLedgerModal('${Security.escapeHtml(e.id)}')">年休台帳</button> <button class="btn btn-outline btn-sm" onclick="openLeaveProfileModal('${Security.escapeHtml(e.id)}')">年休設定</button> <button class="btn btn-outline btn-sm" onclick="deleteEmployee('${Security.escapeHtml(e.id)}')" title="一覧から非表示にします（記録は残ります）">無効化</button>`;
     tr.innerHTML = `<td style="font-family:'DM Mono',monospace;font-size:12px">${Security.escapeHtml(e.id)}</td>
       <td style="font-weight:500">${nameCell}</td>
       <td>${fac?Security.escapeHtml(fac.name):'<span style="color:var(--text-muted)">未設定</span>'}${concurrentBadges}${jobBadges}</td>
@@ -4155,8 +4780,35 @@ async function saveEmployeeEdit() {
 /* ================================================================
    #7 年休プロファイル（判定優先ルール／週所定労働時間／当年度・前年度・前々年度の実績）
 ================================================================ */
+// ver.9.1.0: 年休設定の画面の入力から、本日時点の残を計算して表示する（保存前の確認用）
+function leaveProfileFromModal() {
+  const num=(id,dec)=>{ const v=String(document.getElementById(id)?.value??'').trim(); if(v==='') return null; const n=Number(v); return Number.isFinite(n)?n:null; };
+  const months=[]; for(let i=1;i<=12;i++) months.push(num(`lp-month-${i}`));
+  const raw={ years:{}, carry: document.getElementById('lp-carry')?.value ?? '' };
+  LEAVE_HIST_YEARS.forEach(y=>{ raw.years[y]={ used: document.getElementById(`lp-used-${y}`)?.value ?? '' }; });
+  return {
+    leavePriorityRule: document.getElementById('lp-priority-rule').value==='annual' ? 'annual' : 'weekly',
+    weeklyScheduledHours: num('lp-weekly-hours'), annualScheduledDays: num('lp-annual-days'), monthlyScheduledDays: months,
+    prevYearWeeklyDays: num('lp-prev-weekly-days')||null, prevYearAnnualDays: num('lp-prev-annual-days'), prevYearWeeklyHours: num('lp-prev-weekly-hours'),
+    prev2YearWeeklyDays: num('lp-prev2-weekly-days')||null, prev2YearAnnualDays: num('lp-prev2-annual-days'), prev2YearWeeklyHours: num('lp-prev2-weekly-hours'),
+    _histRaw: raw
+  };
+}
+function previewLeaveProfile() {
+  const id=document.getElementById('lp-emp-id').value;
+  const e=AppState.employees.find(x=>x.id===id); const box=document.getElementById('lp-preview'); if(!e||!box) return;
+  if(!e.hireDate){ box.innerHTML='<p style="font-size:12px;color:var(--danger)">入社日が未登録のため、残日数を計算できません（従業員の編集で登録してください）。</p>'; return; }
+  const p=leaveProfileFromModal();
+  const cur=parseLeaveHistory(e.leaveHistory);
+  const raw={ years:{}, carry:p._histRaw.carry===''?null:p._histRaw.carry };
+  LEAVE_HIST_YEARS.forEach(y=>{ const u=p._histRaw.years[y].used; raw.years[y]={...(cur.years[y]||{}), used: u===''?null:u}; });
+  const tmp={...e, ...p, leaveHistory: parseLeaveHistory(raw)}; delete tmp._histRaw;
+  const L=Leave.buildLedger(tmp, (AppState._leaveUsageMap||{})[e.id]||[]);
+  box.innerHTML = leaveSummaryHtml(L) + `<details style="font-size:12px"><summary style="cursor:pointer;color:var(--text-secondary)">付与ごとの内訳を見る</summary>${leaveLedgerTableHtml(L)}</details>`;
+}
 function openLeaveProfileModal(id) {
-  const e = AppState.employees.find(x=>x.id===id);
+  const e0 = AppState.employees.find(x=>x.id===id);
+  const e = (e0 && AppState.leaveMigDirty?.[id] && typeof leaveEmpView==='function') ? leaveEmpView(e0) : e0; // ver.9.1.0: 一括入力の未保存分を出す
   if(!e){ showNotif('従業員が見つかりません','error'); return; }
   document.getElementById('lp-emp-id').value = e.id;
   document.getElementById('lp-emp-name').textContent = `${e.name}（${e.id}）`;
@@ -4175,7 +4827,17 @@ function openLeaveProfileModal(id) {
   document.getElementById('lp-prev2-annual-days').value = e.prev2YearAnnualDays!=null ? e.prev2YearAnnualDays : '';
   document.getElementById('lp-prev2-weekly-hours').value = e.prev2YearWeeklyHours!=null ? e.prev2YearWeeklyHours : '';
   updateLeaveProfileMonthSum();
+  // ver.9.1.0: 取得実績（一括入力の画面で未保存の変更があればそれを出す）
+  const ev0 = (typeof leaveEmpView==='function' && AppState.leaveMigDirty) ? leaveEmpView(e) : e;
+  const hist = parseLeaveHistory(ev0.leaveHistory);
+  LEAVE_HIST_YEARS.forEach(y=>{ const el=document.getElementById(`lp-used-${y}`); if(el) el.value = hist.years[y]?.used ?? ''; });
+  document.getElementById('lp-carry').value = hist.carry ?? '';
+  // ver.9.1.0: どの年度の付与の判定に使うかを、年で表示する
+  const fy=leaveFy(fmtDate(new Date()));
+  document.getElementById('lp-prev-label').textContent=`（${fy-1}年度の実績 → ${fy}/4/1の付与の判定に使用）`;
+  document.getElementById('lp-prev2-label').textContent=`（${fy-2}年度の実績 → ${fy-1}/4/1以前の付与の判定に使用。前年度が空欄のときも使用）`;
   document.getElementById('lp-error').style.display='none';
+  previewLeaveProfile();
   openModal('modal-leave-profile');
 }
 
@@ -4228,6 +4890,12 @@ async function saveLeaveProfile() {
   };
   const [prevYearWeeklyDays, prevYearAnnualDays, prevYearWeeklyHours] = yearGroup('prev', '前年度実績');
   const [prev2YearWeeklyDays, prev2YearAnnualDays, prev2YearWeeklyHours] = yearGroup('prev2', '前々年度実績');
+  // ver.9.1.0: 取得実績・繰越
+  const usedVals={};
+  LEAVE_HIST_YEARS.forEach(y=>{ usedVals[y]=val(`lp-used-${y}`, `${y}年度の取得日数`, 0, 60, {decimal:true}); });
+  const carryVal=val('lp-carry', '2024年度はじめの繰越', 0, 40, {decimal:true});
+  const halfCheck=(id,label)=>{ const v=document.getElementById(id).value; if(v!=='' && Math.round(Number(v)*2)!==Number(v)*2) problems.push(`${label}は0.5日単位で入力してください（入力：${v}）`); };
+  LEAVE_HIST_YEARS.forEach(y=>halfCheck(`lp-used-${y}`, `${y}年度の取得日数`)); halfCheck('lp-carry','2024年度はじめの繰越');
   if(problems.length){
     err.innerHTML = '入力内容を確認してください：<br>' + problems.map(p=>Security.escapeHtml(p)).join('<br>');
     err.style.display='block';
@@ -4248,6 +4916,13 @@ async function saveLeaveProfile() {
     prev2_year_weekly_hours: prev2YearWeeklyHours,
     updated_at: new Date().toISOString()
   };
+  // ver.9.1.0: 取得実績（年度ごとの区分・付与日数の手動指定は年休台帳の画面の値をそのまま残す）
+  const e0=AppState.employees.find(x=>x.id===id);
+  const curHist=parseLeaveHistory(e0?.leaveHistory);
+  const rawHist={ years:{}, carry:carryVal };
+  LEAVE_HIST_YEARS.forEach(y=>{ rawHist.years[y]={...(curHist.years[y]||{}), used:usedVals[y]}; });
+  const newHist=parseLeaveHistory(rawHist);
+  payload.leave_history=newHist;
   showLoading('保存中...');
   try {
     await DB.patch('employees', payload, `?id=eq.${encodeURIComponent(id)}`);
@@ -4257,16 +4932,21 @@ async function saveLeaveProfile() {
       e.monthlyScheduledDays=months; e.prevYearWeeklyDays=prevYearWeeklyDays; e.prevYearAnnualDays=prevYearAnnualDays;
       e.prevYearWeeklyHours=prevYearWeeklyHours; e.prev2YearWeeklyDays=prev2YearWeeklyDays;
       e.prev2YearAnnualDays=prev2YearAnnualDays; e.prev2YearWeeklyHours=prev2YearWeeklyHours; e.updatedAt=payload.updated_at;
+      e.leaveHistory=newHist; // ver.9.1.0
     }
     Security.log('LEAVE_PROFILE_EDIT', id);
     closeModal('modal-leave-profile');
+    if(AppState.leaveMigDirty) delete AppState.leaveMigDirty[id]; // 一括入力の画面の未保存分は、この保存で確定
     await refreshEmployeeTableWithLeave();
+    if(document.getElementById('modal-leave-migration')?.classList.contains('open')) renderLeaveMigration();
     showNotif('年休設定を保存しました','success');
   } catch(err2) {
     let msg='保存に失敗しました';
     const em=err2.message||'';
     // ver.8.6.6: 列が無いときのエラー文（Could not find the 'xxx' column …）も正しく見分ける
-    if(/(leave_priority_rule|weekly_scheduled_hours|annual_scheduled_days|monthly_scheduled_days|prev_year_|prev2_year_)/i.test(em) && /column|schema cache/i.test(em)) {
+    if(/leave_history/i.test(em) && /column|schema cache/i.test(em)) {
+      msg='取得実績を保存する列がDBに未追加です。SupabaseでSQL（ver.9.1.0 年休台帳）を実行してください';
+    } else if(/(leave_priority_rule|weekly_scheduled_hours|annual_scheduled_days|monthly_scheduled_days|prev_year_|prev2_year_)/i.test(em) && /column|schema cache/i.test(em)) {
       msg='年休設定を保存する列がDBに未追加です。SupabaseでSQL（ver.8.6.6 年休設定の列）を実行してください';
     } else if(err2.sessionExpired) {
       msg='ログインの有効期限が切れています。いったんログアウトして、もう一度ログインしてください';
