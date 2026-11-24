@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co;">
-<title>シフト管理システム ver.9.1.0</title>
+<title>シフト管理システム ver.9.2.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -705,7 +705,7 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
         </svg>
       </div>
       <h1>シフト管理システム</h1>
-      <p>Shift Management System ver.9.1.0</p>
+      <p>Shift Management System ver.9.2.0</p>
     </div>
     <div class="form-group">
       <label>従業員番号</label>
@@ -905,7 +905,7 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
           <div id="agg-stats" class="stats-grid" style="margin-bottom:20px"></div>
           <div class="gantt-container">
             <table class="data-table">
-              <thead><tr><th>従業員番号</th><th>氏名</th><th>施設</th><th>勤務日数</th><th>総勤務時間</th><th>年休取得数</th><th>ステータス</th></tr></thead>
+              <thead id="agg-thead"><tr><th>従業員番号</th><th>氏名</th><th>施設</th><th>勤務日数</th><th>総勤務時間</th><th>年休取得数</th><th>ステータス</th></tr></thead>
               <tbody id="agg-tbody"><tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:40px">「集計」ボタンを押してください</td></tr></tbody>
             </table>
           </div>
@@ -1279,6 +1279,7 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
     <div class="modal-body">
       <input type="hidden" id="facility-activities-fid">
       <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">シフト入力時に選択できる個別項目（教室名など）を登録します。出勤日数や有給の計算には影響しません。金額は謝礼金の集計にのみ使用し、スタッフ画面には表示されません。</p>
+      <p style="font-size:12px;color:var(--text-secondary);margin:-6px 0 12px">「別集計」にチェックした項目は、勤務集計とExcel出力で<b>通常の勤務時間から分けて</b>集計します（合計の勤務時間は変わりません）。シフトの作成・表示・人数チェックには影響しません。</p>
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <input type="text" id="new-activity-name" placeholder="例：教室A" style="flex:1.4" maxlength="50" oninput="sanitizeInput(this)">
         <input type="number" id="new-activity-amount" placeholder="金額(円/回)" min="0" max="1000000" step="1" style="width:120px">
@@ -1767,7 +1768,7 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
    以下の2行を自分のプロジェクトの値に書き換えてください
 ================================================================ */
 // アプリのバージョン（大規模改修: x.0.0 / 中規模: 0.x.0 / 小規模: 0.0.x）
-const APP_VERSION = '9.1.0';
+const APP_VERSION = '9.2.0';
 const SUPABASE_URL = 'https://iehxxwhzzwlhqwxqgdph.supabase.co';           // 例: https://xxxxxxxxxx.supabase.co
 const SUPABASE_KEY = 'sb_publishable_frYDQgYp34Gqw90YoleZzg_DeaoWOEb';       // 例: sb_publishable_xxxxxxxxxxxx
 // 追加修正: RLS有効化に伴い、テーブルへは直接アクセスせず、必ずEdge Function（プロキシ）を経由する。
@@ -3142,7 +3143,8 @@ async function loadFacilityActivitiesMaster() {
     const rows = await DB.get('facility_activities', '?deleted_at=is.null&order=name.asc');
     AppState.facilityActivities = rows.map(a => ({
       id: a.id, facilityId: a.facility_id, name: a.name, amount: a.amount!=null?Number(a.amount):0, deleted: false,
-      displayName: typeof a.display_name==='string' ? a.display_name : '' // ver.8.7.0 ②: スタッフ向けの表示名（空欄なら名前）
+      displayName: typeof a.display_name==='string' ? a.display_name : '', // ver.8.7.0 ②: スタッフ向けの表示名（空欄なら名前）
+      separateAggregate: a.separate_aggregate===true // ver.9.2.0: 労働時間とは別に集計する
     }));
   } catch(err) {
     AppState.facilityActivities = [];
@@ -3841,11 +3843,12 @@ function renderFacilityActivitiesList(facilityId) {
   const acts = AppState.facilityActivities.filter(a=>a.facilityId===facilityId && !a.deleted);
   renderFacilityJobAssign(facilityId); // ver.8.3.0 ④
   if(!acts.length){ box.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:20px 0;font-size:13px">個別項目が登録されていません</p>'; return; }
-  box.innerHTML = `<div style="display:flex;gap:8px;font-size:11px;color:var(--text-muted);padding:0 0 2px"><span style="flex:1;min-width:80px">名前（管理者用）</span><span style="width:150px">表示名（スタッフ・掲示用）</span><span style="width:100px">金額（円/回）</span><span style="width:110px"></span></div>`
+  box.innerHTML = `<div style="display:flex;gap:8px;font-size:11px;color:var(--text-muted);padding:0 0 2px"><span style="flex:1;min-width:80px">名前（管理者用）</span><span style="width:150px">表示名（スタッフ・掲示用）</span><span style="width:100px">金額（円/回）</span><span style="width:64px" title="労働時間とは別に集計する">別集計</span><span style="width:110px"></span></div>`
     + acts.map(a=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
     <span style="font-size:13px;flex:1;min-width:80px">${Security.escapeHtml(a.name)}</span>
     <input type="text" class="act-disp-input" data-act-id="${Security.escapeHtml(a.id)}" value="${Security.escapeHtml(a.displayName||'')}" maxlength="30" style="width:150px" placeholder="表示名（スタッフ向け）" title="スタッフ画面・掲示用PDFに出す名前です。空欄なら左の名前を出します">
     <input type="number" class="act-amount-input" data-act-id="${Security.escapeHtml(a.id)}" value="${a.amount||0}" min="0" max="1000000" step="1" style="width:100px" placeholder="金額(円/回)">
+    <label style="width:64px;display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer" title="チェックすると、勤務集計で通常の勤務時間から分けて集計します（チェックするとすぐ保存されます）"><input type="checkbox" class="act-sep-input" data-act-id="${Security.escapeHtml(a.id)}"${a.separateAggregate?' checked':''} onchange="saveFacilityActivitySeparate('${Security.escapeHtml(a.id)}', this)">別集計</label>
     <button class="btn btn-outline btn-sm" onclick="saveFacilityActivityAmount('${Security.escapeHtml(a.id)}')">保存</button>
     <button class="btn btn-outline btn-sm" onclick="deleteFacilityActivity('${Security.escapeHtml(a.id)}')">削除</button>
   </div>`).join('');
@@ -3929,6 +3932,72 @@ async function saveFacilityActivityAmount(id) {
     Security.log('FAC_ACTIVITY_AMOUNT_ERR', err.message, 'ERROR');
   } finally { hideLoading(); }
 }
+
+// ver.9.2.0: 個別項目を「労働時間とは別に集計する」かどうかを保存する（チェックしたらすぐ保存）
+const SEPARATE_AGG_COLUMN_MSG='「別集計」を保存する列がDBに未追加です。SupabaseでSQL（ver.9.2.0 個別項目の別集計）を実行してください';
+async function saveFacilityActivitySeparate(id, el) {
+  if(!Auth.requireAdmin()){ if(el) el.checked=!el.checked; return; }
+  id = Security.sanitizeStr(id);
+  const a = AppState.facilityActivities.find(x=>x.id===id);
+  if(!a || !el) return;
+  const val = !!el.checked;
+  el.disabled = true;
+  try {
+    await DB.patch('facility_activities', {separate_aggregate: val}, `?id=eq.${encodeURIComponent(id)}`);
+    a.separateAggregate = val;
+    Security.log('FAC_ACTIVITY_SEPARATE', `${id}:${val}`);
+    showNotif(val ? `「${a.name}」を労働時間とは別に集計します` : `「${a.name}」の別集計をやめました`, 'success');
+  } catch(err) {
+    el.checked = !val;
+    const m = err?.message||'';
+    showNotif(/separate_aggregate/i.test(m) ? SEPARATE_AGG_COLUMN_MSG : `保存に失敗しました（詳細: ${Security.sanitizeStr(m,160)}）`, 'error');
+    Security.log('FAC_ACTIVITY_SEPARATE_ERR', m, 'ERROR');
+  } finally { el.disabled = false; }
+}
+
+/* ver.9.2.0: 勤務時間を「通常」と「別集計の個別項目」に分ける。
+   ・勤務時間（開始〜終了−休憩。実績確定済みなら実績時刻）は今まで通りで、合計は変わらない
+   ・別集計の項目は、勤務時間の中にある部分だけを数える（勤務時間の外・休憩と重なる部分は数えない）
+   ・別集計の項目どうしが重なるときは、重なった時間を一度だけ数える（先に始まる項目に入れる） */
+function getSeparateActivityIds(facIds) {
+  const set = facIds ? new Set(facIds) : null;
+  return new Set(AppState.facilityActivities.filter(a=>a.separateAggregate && !a.deleted && (!set || set.has(a.facilityId))).map(a=>a.id));
+}
+function getSeparateColumnNames(facIds) {
+  const set = new Set(facIds);
+  const names = [...new Set(AppState.facilityActivities.filter(a=>a.separateAggregate && !a.deleted && set.has(a.facilityId)).map(a=>a.name))];
+  return names.sort((p,q)=>p.localeCompare(q,'ja'));
+}
+function splitShiftWorkMinutes(shift, facilityId, ym) {
+  const et = getEffectiveShiftTimes(shift);
+  const net = Math.max(0, calcWorkMinutes(et.start, et.end) - (shift.breakMinutes||0));
+  const out = { net, normal: net, sep: {}, sepTotal: 0 };
+  if(!et.start || !et.end || et.start>=et.end) return out;
+  const sepIds = getSeparateActivityIds([facilityId]);
+  if(!sepIds.size) return out;
+  const acts = getShiftActivitiesFor(facilityId, ym).filter(a=>a.shiftId===shift.id && sepIds.has(a.activityId) && a.start && a.end)
+    .sort((p,q)=>p.start.localeCompare(q.start));
+  const brs = shiftBreaksOf(shift);
+  let covered = [];
+  acts.forEach(a=>{
+    const st = a.start>et.start ? a.start : et.start, en = a.end<et.end ? a.end : et.end;
+    if(st>=en) return;
+    let rs = [{start:st, end:en}];
+    brs.forEach(b=>{ if(b.start && b.end) rs = subtractRange(rs, b.start, b.end); });
+    covered.forEach(c=>{ rs = subtractRange(rs, c.start, c.end); });
+    let m = rs.reduce((t,r)=>t+calcWorkMinutes(r.start, r.end), 0);
+    m = Math.min(m, out.net - out.sepTotal);
+    if(m<=0) return;
+    const name = AppState.facilityActivities.find(x=>x.id===a.activityId)?.name || '(項目)';
+    out.sep[name] = (out.sep[name]||0) + m;
+    out.sepTotal += m;
+    covered = mergeRanges(covered.concat(rs));
+  });
+  out.normal = out.net - out.sepTotal;
+  return out;
+}
+const hRound1 = min => Math.round(min/60*10)/10;
+const hRound2 = min => Math.round(min/60*100)/100;
 
 async function addFacilityActivity() {
   const facilityId = document.getElementById('facility-activities-fid').value;
@@ -7662,6 +7731,14 @@ async function saveShiftEntry(republish) {
     }
   }
 
+  // ver.9.2.0: 個別項目が勤務時間（開始〜終了）の外にはみ出していたら保存しない
+  if(!isAnnual){
+    for(const r of collectShiftActivityRows()){
+      const nm=AppState.facilityActivities.find(x=>x.id===r.activityId)?.name||'個別項目';
+      if(r.start>=r.end){ showNotif(`「${nm}」の終了時刻は開始時刻より後にしてください`,'error'); return; }
+      if(r.start<start || r.end>end){ showNotif(`「${nm}」（${r.start}〜${r.end}）が勤務時間（${start}〜${end}）の外にはみ出しています。勤務時間の中に収めてください`,'error'); Security.log('ACTIVITY_OUTSIDE_SHIFT_BLOCKED', `${empId}@${date}`, 'WARN'); return; }
+    }
+  }
   // ver.8.0.0 No.13/14: 確定済みのシフトは確定解除してから修正する
   const existing0=getShiftsFor(facilityId,ym).find(s=>s.empId===empId&&s.date===date);
   if(existing0 && existing0.publishStatus==='published'){ showNotif('確定済みのシフトです。修正するには「確定解除」してください','error'); return; }
@@ -8140,39 +8217,53 @@ async function doAggregate() {
     // 表示中のシフトタブとは無関係に、集計対象月・施設のデータを明示的に読み込んでから集計する
     await Promise.all(targetFacIds.flatMap(fid=>[loadShiftsForMonth(fid, ym), loadShiftActivitiesForMonth(fid, ym)]));
     const results=[];
+    const sepCols = getSeparateColumnNames(targetFacIds); // ver.9.2.0
     // 複数施設兼務対応: 兼務施設を持つ従業員は施設ごとに1行ずつ集計する（③施設ごとの集計を実現）
     AppState.employees.forEach(emp=>{
       const facIds = getEmployeeFacilityIds(emp).filter(fid=>!fFilter||fid===fFilter);
       facIds.forEach(facilityId=>{
         const fac=AppState.facilities.find(f=>f.id===facilityId);
         const shifts=(AppState.shifts[facilityId]?.[ym]||[]).filter(s=>s.empId===emp.id);
-        let totalH=0, ann=0;
+        let netMin=0, normalMin=0, ann=0; const sepMin={};
         shifts.forEach(s=>{
           if(s.isAnnual){ann++;}
           // #14 修正: 総勤務時間は休憩時間を差し引いた実労働時間で集計する
           // 追加修正: 勤務実績が確定済みなら実績時刻を優先する（未確定は従来通り予定時刻で暫定集計）
-          else if(!s.isOffDuty){const et=getEffectiveShiftTimes(s);const workMin=calcWorkMinutes(et.start,et.end);const netMin=Math.max(0,workMin-(s.breakMinutes||0));totalH+=netMin/60;}
+          // ver.9.2.0: 別集計の個別項目の時間を通常の勤務時間から分ける（合計は変わらない）
+          else if(!s.isOffDuty){ const sp=splitShiftWorkMinutes(s, facilityId, ym); netMin+=sp.net; normalMin+=sp.normal; Object.entries(sp.sep).forEach(([k,v])=>{ sepMin[k]=(sepMin[k]||0)+v; }); }
         });
-        results.push({empId:emp.id,name:emp.name,facility:fac?.name||'',workDays:shifts.filter(s=>!s.isAnnual&&!s.isOffDuty).length,totalH:Math.round(totalH*10)/10,ann});
+        const sepH={}; Object.entries(sepMin).forEach(([k,v])=>{ sepH[k]=hRound1(v); if(!sepCols.includes(k)) sepCols.push(k); });
+        results.push({empId:emp.id,name:emp.name,facility:fac?.name||'',workDays:shifts.filter(s=>!s.isAnnual&&!s.isOffDuty).length,totalH:hRound1(netMin),normalH:hRound1(normalMin),sepH,ann});
       });
     });
+    AppState.lastAggregate = {ym, sepCols, results};
     const statsDiv=document.getElementById('agg-stats');
     const tw=results.reduce((a,r)=>a+r.totalH,0);
     const ta=results.reduce((a,r)=>a+r.ann,0);
+    const ts=results.reduce((a,r)=>a+Object.values(r.sepH).reduce((x,y)=>x+y,0),0);
     statsDiv.innerHTML=`
       <div class="stat-card"><div class="stat-label">対象人数</div><div class="stat-value">${results.length}</div><div class="stat-sub">名</div></div>
       <div class="stat-card"><div class="stat-label">総勤務時間</div><div class="stat-value">${Math.round(tw*10)/10}</div><div class="stat-sub">時間</div></div>
+      ${sepCols.length?`<div class="stat-card"><div class="stat-label">うち別集計</div><div class="stat-value">${Math.round(ts*10)/10}</div><div class="stat-sub">時間</div></div>`:''}
       <div class="stat-card"><div class="stat-label">年休合計</div><div class="stat-value">${ta}</div><div class="stat-sub">日</div></div>
       <div class="stat-card"><div class="stat-label">平均勤務時間</div><div class="stat-value">${results.length?Math.round(tw/results.length*10)/10:0}</div><div class="stat-sub">時間/人</div></div>`;
+    const E=Security.escapeHtml;
+    const head=document.getElementById('agg-thead');
+    if(head) head.innerHTML='<tr><th>従業員番号</th><th>氏名</th><th>施設</th><th>勤務日数</th>'
+      + (sepCols.length ? '<th>通常勤務時間</th>'+sepCols.map(c=>`<th>${E(c)}<br><span style="font-size:10px;font-weight:400">（別集計）</span></th>`).join('')+'<th>合計勤務時間</th>' : '<th>総勤務時間</th>')
+      + '<th>年休取得数</th><th>ステータス</th></tr>';
+    const nCol = 7 + (sepCols.length ? sepCols.length+1 : 0);
     const tbody=document.getElementById('agg-tbody');
-    if(!results.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:40px">データがありません</td></tr>';}
+    if(!results.length){tbody.innerHTML=`<tr><td colspan="${nCol}" style="text-align:center;color:var(--text-muted);padding:40px">データがありません</td></tr>`;}
     else {
-      tbody.innerHTML='';
-      results.forEach(r=>{
+      tbody.innerHTML=results.map(r=>{
         const sc=r.totalH>=40?'badge-green':r.totalH>0?'badge-blue':'badge-gray';
         const st=r.totalH>=40?'規定達成':r.totalH>0?'勤務中':'未登録';
-        tbody.innerHTML+=`<tr><td style="font-family:'DM Mono',monospace;font-size:12px">${Security.escapeHtml(r.empId)}</td><td style="font-weight:500">${Security.escapeHtml(r.name)}</td><td>${Security.escapeHtml(r.facility)}</td><td style="text-align:right">${r.workDays}日</td><td style="text-align:right">${r.totalH}時間</td><td style="text-align:right"><span class="badge badge-annual">${r.ann}日</span></td><td><span class="badge ${sc}">${st}</span></td></tr>`;
-      });
+        const hours = sepCols.length
+          ? `<td style="text-align:right">${r.normalH}時間</td>`+sepCols.map(c=>`<td style="text-align:right">${r.sepH[c]||0}時間</td>`).join('')+`<td style="text-align:right;font-weight:600">${r.totalH}時間</td>`
+          : `<td style="text-align:right">${r.totalH}時間</td>`;
+        return `<tr><td style="font-family:'DM Mono',monospace;font-size:12px">${E(r.empId)}</td><td style="font-weight:500">${E(r.name)}</td><td>${E(r.facility)}</td><td style="text-align:right">${r.workDays}日</td>${hours}<td style="text-align:right"><span class="badge badge-annual">${r.ann}日</span></td><td><span class="badge ${sc}">${st}</span></td></tr>`;
+      }).join('');
     }
     // #10 修正: 個別項目別の集計は施設単位の出勤日数・有給集計とは完全に独立して算出する
     renderActivityAggregate(ym, fFilter);
@@ -8183,16 +8274,22 @@ async function doAggregate() {
 }
 
 // #16 修正: シフト（集計）データをCSV形式でダウンロードできるようにする
+// ver.9.2.0: 画面の表ではなく、直前の集計結果から出力する（別集計の列にも対応）
+function buildAggregateExportRows() {
+  const ag=AppState.lastAggregate;
+  if(!ag || ag.ym!==document.getElementById('agg-month').value) return null;
+  const cols=ag.sepCols||[];
+  const rows=[['従業員番号','氏名','施設','勤務日数', ...(cols.length?['通常勤務時間(h)', ...cols.map(c=>`${c}(h)`), '合計勤務時間(h)']:['総勤務時間(h)']), '年休取得数','対象月']];
+  ag.results.forEach(r=>rows.push([r.empId, r.name, r.facility, `${r.workDays}日`,
+    ...(cols.length?[`${r.normalH}時間`, ...cols.map(c=>`${r.sepH[c]||0}時間`), `${r.totalH}時間`]:[`${r.totalH}時間`]), `${r.ann}日`, ag.ym]));
+  return rows;
+}
 function exportAggregateCSV() {
   const ym=document.getElementById('agg-month').value;
-  if(!ym){showNotif('先に集計を実行してください','error');return;}
-  const rows=[['従業員番号','氏名','施設','勤務日数','総勤務時間(h)','年休取得数','対象月']];
-  document.getElementById('agg-tbody').querySelectorAll('tr').forEach(tr=>{
-    const cells=tr.querySelectorAll('td');
-    if(cells.length>=6) rows.push([cells[0].textContent.trim(),cells[1].textContent.trim(),cells[2].textContent.trim(),cells[3].textContent.trim(),cells[4].textContent.trim(),cells[5].textContent.trim(),ym]);
-  });
+  const rows=buildAggregateExportRows();
+  if(!ym || !rows){showNotif('先に集計を実行してください','error');return;}
   if(rows.length<=1){showNotif('出力するデータがありません','error');return;}
-  const csv='\uFEFF'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const csv='﻿'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -8205,14 +8302,10 @@ function exportAggregateCSV() {
 
 function exportAggregateExcel() {
   const ym=document.getElementById('agg-month').value;
-  if(!ym){showNotif('先に集計を実行してください','error');return;}
-  const rows=[['従業員番号','氏名','施設','勤務日数','総勤務時間(h)','年休取得数','対象月']];
-  document.getElementById('agg-tbody').querySelectorAll('tr').forEach(tr=>{
-    const cells=tr.querySelectorAll('td');
-    if(cells.length>=6) rows.push([cells[0].textContent.trim(),cells[1].textContent.trim(),cells[2].textContent.trim(),cells[3].textContent.trim(),cells[4].textContent.trim(),cells[5].textContent.trim(),ym]);
-  });
+  const rows=buildAggregateExportRows();
+  if(!ym || !rows){showNotif('先に集計を実行してください','error');return;}
   const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:14},{wch:20},{wch:14},{wch:10},{wch:16},{wch:12},{wch:10}];
+  ws['!cols']=rows[0].map((h,i)=>({wch: i===1?20 : Math.max(10, String(h).length*2+2)}));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'勤務集計');
   XLSX.writeFile(wb,`勤務集計_${ym}.xlsx`);
@@ -8419,6 +8512,7 @@ function buildKinmuhyoSheetRows(emp, facName, facilityId, ym) {
   const weeklyDays = emp.weeklyDays || 5;
   const estimatedPrescribedDays = Math.round(weeklyDays/7*daysInMonth);
   const shifts = (AppState.shifts[facilityId]?.[ym] || []).filter(s=>s.empId===emp.id);
+  const sepCols = getSeparateColumnNames([facilityId]); // ver.9.2.0
   const rows = [];
   rows.push(['勤務報告書','','','','','','','','']);
   rows.push([`${yy}年${mm}月分`,'','','','','','','','']);
@@ -8426,14 +8520,14 @@ function buildKinmuhyoSheetRows(emp, facName, facilityId, ym) {
   rows.push([`氏名：${emp.name}（${emp.id}）`,'','','','','','','','']);
   rows.push([`今月所定労働日数（従業員マスタの週所定労働日数からの概算）：${estimatedPrescribedDays}日`,'','','','','','','','']);
   rows.push(['','','','','','','','','']);
-  rows.push(['日付','曜日','勤務','始業時刻','終業時刻','休憩(分)','労働時間(h)','深夜労働(h)','備考']);
-  let workDays=0, totalH=0, annualDays=0, offDutyDays=0, nightTotal=0;
+  rows.push(['日付','曜日','勤務','始業時刻','終業時刻','休憩(分)', ...(sepCols.length?['通常勤務(h)', ...sepCols.map(c=>`${c}(h)`), '労働時間 合計(h)']:['労働時間(h)']),'深夜労働(h)','備考']);
+  let workDays=0, totalH=0, annualDays=0, offDutyDays=0, nightTotal=0, totalNormalMin=0; const totalSepMin={};
   for(let d=1; d<=daysInMonth; d++){
     const dateStr = `${yy}-${String(mm).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dd = new Date(dateStr+'T00:00:00');
     const dow = ['日','月','火','水','木','金','土'][dd.getDay()];
     const s = shifts.find(x=>x.date===dateStr);
-    let kubun='', start='', end='', brk='', workH='', night='';
+    let kubun='', start='', end='', brk='', workH='', night='', normalH='', sepH={};
     if(s){
       if(s.isAnnual){ kubun='年休'; annualDays++; }
       else if(s.isOffDuty){ kubun='空き番'; offDutyDays++; }
@@ -8444,18 +8538,21 @@ function buildKinmuhyoSheetRows(emp, facName, facilityId, ym) {
         const workMin=Math.max(0, calcWorkMinutes(et.start,et.end)-(s.breakMinutes||0));
         workH=Math.round(workMin/60*100)/100;
         workDays++; totalH+=workH;
+        if(sepCols.length){ const sp=splitShiftWorkMinutes(s, facilityId, ym); normalH=hRound2(sp.normal); totalNormalMin+=sp.normal;
+          Object.entries(sp.sep).forEach(([k,v])=>{ sepH[k]=hRound2(v); totalSepMin[k]=(totalSepMin[k]||0)+v; }); }
         night=calcLateNightHours(et.end);
         nightTotal+=night;
       }
     }
     const noteText = (s && !s.isAnnual && !s.isOffDuty && s.actualConfirmed) ? '実績確定' : '';
-    rows.push([dateStr, dow, kubun, start, end, brk, workH, night, noteText]);
+    rows.push([dateStr, dow, kubun, start, end, brk, ...(sepCols.length?[normalH, ...sepCols.map(c=>sepH[c]!=null?sepH[c]:(kubun==='出勤'?0:'')), workH]:[workH]), night, noteText]);
   }
   totalH=Math.round(totalH*100)/100;
   nightTotal=Math.round(nightTotal*100)/100;
-  rows.push(['合計','','','','','',totalH,nightTotal,'']);
+  rows.push(['合計','','','','','', ...(sepCols.length?[hRound2(totalNormalMin), ...sepCols.map(c=>hRound2(totalSepMin[c]||0)), totalH]:[totalH]),nightTotal,'']);
   rows.push(['','','','','','','','','']);
   rows.push([`勤務日数：${workDays}日　年休日数：${annualDays}日　空き番：${offDutyDays}日`,'','','','','','','','']);
+  const W=Math.max(...rows.map(r=>r.length)); rows.forEach(r=>{ while(r.length<W) r.push(''); }); // ver.9.2.0: 列数をそろえる
   return rows;
 }
 
@@ -8463,16 +8560,17 @@ function buildKinmuhyoSheetRows(emp, facName, facilityId, ym) {
 // 複数施設兼務対応: facilityIdを指定した場合はその施設分のみ、nullなら従業員が所属する全施設分を合算して集計する
 function buildShareiSheetRows(emps, deptLabel, facilityId, ym) {
   const [, mm] = ym.split('-').map(Number);
+  const sepCols = getSeparateColumnNames(facilityId ? [facilityId] : [...new Set(emps.flatMap(e=>getEmployeeFacilityIds(e)))]); // ver.9.2.0
   const rows = [];
   rows.push(['特定非営利活動法人ウィル大口スポーツクラブ','','','','','','','']);
   rows.push([`${mm}月分　謝礼一覧表`,'','','','','','','']);
   rows.push([`部門：${deptLabel}`,'','','','','','作成日：',fmtDate(new Date())]);
   rows.push(['','','','','','','','']);
-  rows.push(['No.','氏名','勤務日数','有給日数','勤務時間(h)','支給額(円)','支給方法','備考']);
-  let idx=1, totWorkDays=0, totAnnual=0, totH=0, totFee=0;
+  rows.push(['No.','氏名','勤務日数','有給日数', ...(sepCols.length?['通常勤務(h)', ...sepCols.map(c=>`${c}(h)`), '勤務時間 合計(h)']:['勤務時間(h)']),'支給額(円)','支給方法','備考']);
+  let idx=1, totWorkDays=0, totAnnual=0, totH=0, totFee=0, totNormalMin=0; const totSepMin={};
   emps.forEach(emp=>{
     const facIds = facilityId ? [facilityId] : getEmployeeFacilityIds(emp);
-    let workDays=0, empH=0, annualDays=0, fee=0;
+    let workDays=0, empH=0, annualDays=0, fee=0, empNormalMin=0; const empSepMin={};
     facIds.forEach(fid=>{
       const shifts=(AppState.shifts[fid]?.[ym]||[]).filter(s=>s.empId===emp.id);
       shifts.forEach(s=>{
@@ -8483,6 +8581,7 @@ function buildShareiSheetRows(emps, deptLabel, facilityId, ym) {
         const et=getEffectiveShiftTimes(s);
         const workMin=Math.max(0, calcWorkMinutes(et.start,et.end)-(s.breakMinutes||0));
         empH += workMin/60;
+        if(sepCols.length){ const sp=splitShiftWorkMinutes(s, fid, ym); empNormalMin+=sp.normal; Object.entries(sp.sep).forEach(([k,v])=>{ empSepMin[k]=(empSepMin[k]||0)+v; }); }
         getShiftActivitiesFor(fid, ym).filter(a=>a.shiftId===s.id).forEach(a=>{
           const m=AppState.facilityActivities.find(x=>x.id===a.activityId);
           fee += m?.amount||0;
@@ -8490,10 +8589,12 @@ function buildShareiSheetRows(emps, deptLabel, facilityId, ym) {
       });
     });
     empH=Math.round(empH*100)/100;
-    rows.push([idx++, emp.name, workDays, annualDays, empH, fee, '口座振込', '']);
+    rows.push([idx++, emp.name, workDays, annualDays, ...(sepCols.length?[hRound2(empNormalMin), ...sepCols.map(c=>hRound2(empSepMin[c]||0)), empH]:[empH]), fee, '口座振込', '']);
     totWorkDays+=workDays; totAnnual+=annualDays; totH+=empH; totFee+=fee;
+    totNormalMin+=empNormalMin; Object.entries(empSepMin).forEach(([k,v])=>{ totSepMin[k]=(totSepMin[k]||0)+v; });
   });
-  rows.push(['','合計',totWorkDays,totAnnual,Math.round(totH*100)/100,totFee,'','']);
+  rows.push(['','合計',totWorkDays,totAnnual, ...(sepCols.length?[hRound2(totNormalMin), ...sepCols.map(c=>hRound2(totSepMin[c]||0)), Math.round(totH*100)/100]:[Math.round(totH*100)/100]),totFee,'','']);
+  const W=Math.max(...rows.map(r=>r.length)); rows.forEach(r=>{ while(r.length<W) r.push(''); });
   return rows;
 }
 
@@ -8522,7 +8623,7 @@ async function exportKinmuhyoShareiExcel() {
         anyKinmu=true;
         const rows=buildKinmuhyoSheetRows(emp, fac?.name||'', facilityId, ym);
         const ws=XLSX.utils.aoa_to_sheet(rows);
-        ws['!cols']=[{wch:12},{wch:6},{wch:8},{wch:10},{wch:10},{wch:9},{wch:10},{wch:10},{wch:16}];
+        ws['!cols']=[{wch:12},{wch:6},{wch:8},{wch:10},{wch:10},{wch:9}, ...rows[6].slice(6,-2).map(h=>({wch:Math.max(10,String(h).length*2)})),{wch:10},{wch:16}];
         const sheetLabel = facIds.length>1 ? `勤務表_${emp.name}_${fac?.name||''}` : `勤務表_${emp.name}`;
         XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(sheetLabel, usedNames));
       });
@@ -8530,7 +8631,7 @@ async function exportKinmuhyoShareiExcel() {
     const deptLabel = fFilter ? (AppState.facilities.find(f=>f.id===fFilter)?.name||'') : '全施設';
     const shareiRows = buildShareiSheetRows(targetEmps, deptLabel, fFilter||null, ym);
     const wsS=XLSX.utils.aoa_to_sheet(shareiRows);
-    wsS['!cols']=[{wch:5},{wch:14},{wch:9},{wch:9},{wch:10},{wch:12},{wch:10},{wch:16}];
+    wsS['!cols']=[{wch:5},{wch:14},{wch:9},{wch:9}, ...shareiRows[4].slice(4,-3).map(h=>({wch:Math.max(10,String(h).length*2)})),{wch:12},{wch:10},{wch:16}];
     XLSX.utils.book_append_sheet(wb, wsS, sanitizeSheetName('謝礼一覧表', usedNames));
     if(!anyKinmu){ showNotif('出力するデータがありません','error'); return; }
     XLSX.writeFile(wb, `勤務報告書・謝礼一覧_${ym}.xlsx`);
