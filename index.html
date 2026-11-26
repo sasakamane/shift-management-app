@@ -6,7 +6,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co;">
-<title>シフト管理システム ver.9.2.0</title>
+<title>シフト管理システム ver.9.2.1</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -679,6 +679,9 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
   .name-cell-inner>span:first-child{max-width:62px}
   .gantt-table thead th.date-col{width:48px!important;min-width:48px!important}
 }
+/* ver.9.2.1: 年休希望のときは時間入力をグレーアウトする */
+#staff-entry-time-wrap.is-annual{opacity:.45}
+#staff-entry-time-wrap.is-annual select{background:var(--surface-2);cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -705,7 +708,7 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
         </svg>
       </div>
       <h1>シフト管理システム</h1>
-      <p>Shift Management System ver.9.2.0</p>
+      <p>Shift Management System ver.9.2.1</p>
     </div>
     <div class="form-group">
       <label>従業員番号</label>
@@ -1178,7 +1181,7 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
         <button class="btn btn-outline btn-sm" onclick="selectAllStaffDates()">全日選択</button>
         <button class="btn btn-outline btn-sm" onclick="clearAllStaffDates()">クリア</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+      <div id="staff-entry-time-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
         <div>
           <label style="font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px">開始時刻</label>
           <select id="staff-entry-start" style="width:100%"></select>
@@ -1189,9 +1192,10 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
         </div>
       </div>
       <div style="margin-top:12px;display:flex;align-items:center;gap:12px">
-        <label class="check-wrap"><input type="checkbox" id="staff-entry-annual"> 年休希望</label>
+        <label class="check-wrap"><input type="checkbox" id="staff-entry-annual" onchange="syncStaffAnnualTimeState()"> 年休希望</label>
         <button class="btn btn-outline btn-sm" onclick="copyPrevDayToStaff()">前日コピー</button>
       </div>
+      <div id="staff-entry-annual-note" style="display:none;margin-top:8px;font-size:12px;color:var(--text-secondary)">年休希望のときは、時間の入力は不要です（1日単位の年休になります）</div>
       <div style="margin-top:12px;font-size:12px;color:var(--text-secondary);background:var(--surface-2);padding:8px 12px;border-radius:var(--radius)" id="staff-entry-confirm-preview">日付が選択されていません</div>
     </div>
     <div class="modal-footer">
@@ -1768,7 +1772,7 @@ tr.drop-ng td{box-shadow:inset 0 0 0 2px #fca5a5}
    以下の2行を自分のプロジェクトの値に書き換えてください
 ================================================================ */
 // アプリのバージョン（大規模改修: x.0.0 / 中規模: 0.x.0 / 小規模: 0.0.x）
-const APP_VERSION = '9.2.0';
+const APP_VERSION = '9.2.1';
 const SUPABASE_URL = 'https://iehxxwhzzwlhqwxqgdph.supabase.co';           // 例: https://xxxxxxxxxx.supabase.co
 const SUPABASE_KEY = 'sb_publishable_frYDQgYp34Gqw90YoleZzg_DeaoWOEb';       // 例: sb_publishable_xxxxxxxxxxxx
 // 追加修正: RLS有効化に伴い、テーブルへは直接アクセスせず、必ずEdge Function（プロキシ）を経由する。
@@ -8875,7 +8879,7 @@ function openStaffMultiEntry(initialDate) {
     if(facIds.length>1&&existing.facilityId) facSel.value=existing.facilityId;
   }
   renderStaffMultiDateGrid(days, ym, u.id);
-  updateStaffPreview();
+  syncStaffAnnualTimeState(); // ver.9.2.1
   openModal('modal-staff-shift-entry');
 }
 
@@ -9005,9 +9009,20 @@ function copyPrevDayToStaff() {
   document.getElementById('staff-entry-start').value=src.start||'09:00';
   document.getElementById('staff-entry-end').value=src.end||'17:00';
   document.getElementById('staff-entry-annual').checked=!!(src.isAnnual);
+  syncStaffAnnualTimeState(); // ver.9.2.1
   const facWrap=document.getElementById('staff-entry-facility-wrap');
   if(facWrap.style.display!=='none'&&src.facilityId) document.getElementById('staff-entry-facility').value=src.facilityId;
   showNotif(`${prevStr} のデータをコピーしました`,'success');
+}
+
+// ver.9.2.1: 「年休希望」にチェックがあるときは、開始・終了時刻をグレーアウトして選べないようにする
+//（時間単位の年休の仕組みは残したまま、画面上は入力させない。時刻の値は消さない）
+function syncStaffAnnualTimeState() {
+  const on=!!document.getElementById('staff-entry-annual')?.checked;
+  ['staff-entry-start','staff-entry-end'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.disabled=on; el.setAttribute('aria-disabled', on?'true':'false'); } });
+  document.getElementById('staff-entry-time-wrap')?.classList.toggle('is-annual', on);
+  const note=document.getElementById('staff-entry-annual-note'); if(note) note.style.display=on?'':'none';
+  if(typeof updateStaffPreview==='function') updateStaffPreview();
 }
 
 function closeStaffEntryModal() { closeModal('modal-staff-shift-entry'); }
